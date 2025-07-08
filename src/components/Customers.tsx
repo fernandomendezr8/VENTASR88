@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Users, Mail, Phone, MapPin } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Users, Mail, Phone, MapPin, User } from 'lucide-react'
 import { supabase, Customer } from '../lib/supabase'
 
 const Customers: React.FC = () => {
