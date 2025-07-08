@@ -60,6 +60,30 @@ export interface Database {
         }
         Relationships: []
       }
+      units_of_measure: {
+        Row: {
+          id: string
+          name: string
+          abbreviation: string
+          category: 'weight' | 'volume' | 'length' | 'area' | 'unit'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          abbreviation: string
+          category: 'weight' | 'volume' | 'length' | 'area' | 'unit'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          abbreviation?: string
+          category?: 'weight' | 'volume' | 'length' | 'area' | 'unit'
+          created_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           id: string
@@ -104,6 +128,7 @@ export interface Database {
           created_at: string
           image_url: string | null
           image_alt: string | null
+          unit_of_measure_id: string | null
         }
         Insert: {
           id?: string
@@ -118,6 +143,7 @@ export interface Database {
           created_at?: string
           image_url?: string | null
           image_alt?: string | null
+          unit_of_measure_id?: string | null
         }
         Update: {
           id?: string
@@ -132,6 +158,7 @@ export interface Database {
           created_at?: string
           image_url?: string | null
           image_alt?: string | null
+          unit_of_measure_id?: string | null
         }
         Relationships: [
           {
@@ -146,6 +173,13 @@ export interface Database {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_unit_of_measure_id_fkey"
+            columns: ["unit_of_measure_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
           }
         ]
