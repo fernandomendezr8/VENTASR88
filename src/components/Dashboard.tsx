@@ -89,13 +89,17 @@ const Dashboard: React.FC = () => {
         .select('*', { count: 'exact', head: true })
 
       // Fetch low stock items
-      const { data: inventoryData } = await supabase
+      const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventory')
         .select(`
           quantity,
           min_stock,
           product:products(id, name)
         `)
+
+      if (inventoryError) {
+        console.error('Error fetching inventory:', inventoryError)
+      }
 
       // Process low stock items
       const lowStockItems = inventoryData 

@@ -152,7 +152,7 @@ const NewSale: React.FC = () => {
       }
 
       // Add cash register entry
-      await supabase
+      const { error: cashError } = await supabase
         .from('cash_register')
         .insert({
           type: 'sale',
@@ -160,6 +160,11 @@ const NewSale: React.FC = () => {
           description: `Venta #${sale.id.slice(-8)}`,
           reference_id: sale.id
         })
+
+      if (cashError) {
+        console.error('Error adding cash register entry:', cashError)
+        // Don't fail the sale if cash register fails, just log it
+      }
 
       // Reset form
       setCart([])

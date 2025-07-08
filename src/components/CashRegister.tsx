@@ -26,15 +26,10 @@ const CashRegister: React.FC = () => {
   const fetchMovements = async () => {
     setLoading(true)
     try {
+      // First get cash register movements
       let query = supabase
         .from('cash_register')
-        .select(`
-          *,
-          sale:sales(
-            id,
-            customer:customers(name)
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (dateFilter) {
@@ -45,9 +40,33 @@ const CashRegister: React.FC = () => {
         query = query.eq('type', typeFilter)
       }
 
-      const { data } = await query
+      const { data: cashData } = await query
 
-      setMovements(data || [])
+      // Get sales data separately for movements that reference sales
+      const salesIds = cashData?.filter(item => item.reference_id && item.type === 'sale')
+        .map(item => item.reference_id) || []
+
+      let salesData: any[] = []
+      if (salesIds.length > 0) {
+        const { data } = await supabase
+          .from('sales')
+          .select(`
+            id,
+            customer:customers(name)
+          `)
+          .in('id', salesIds)
+        salesData = data || []
+      }
+
+      // Combine the data
+      const movements = cashData?.map(movement => ({
+        ...movement,
+        sale: movement.type === 'sale' && movement.reference_id 
+          ? salesData.find(sale => sale.id === movement.reference_id)
+          : null
+      })) || []
+
+      setMovements(movements)
     } catch (error) {
       console.error('Error fetching cash movements:', error)
     } finally {
