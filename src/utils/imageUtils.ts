@@ -59,19 +59,19 @@ export const compressImage = (
       } else {
         reject(new Error('Could not get canvas context'))
       }
+      
+      // Clean up object URL after processing
+      URL.revokeObjectURL(objectUrl)
     }
 
-    img.onerror = () => reject(new Error('Could not load image'))
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Could not load image'))
+    }
     
     // Create object URL for the file
     const objectUrl = URL.createObjectURL(file)
     img.src = objectUrl
-    
-    // Clean up object URL after image loads
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl)
-      img.onload() // Call the original onload
-    }
   })
 }
 
