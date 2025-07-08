@@ -99,6 +99,8 @@ export interface Database {
           supplier_id: string | null
           is_active: boolean | null
           created_at: string
+          image_url: string | null
+          image_alt: string | null
         }
         Insert: {
           id?: string
@@ -111,6 +113,8 @@ export interface Database {
           supplier_id?: string | null
           is_active?: boolean | null
           created_at?: string
+          image_url?: string | null
+          image_alt?: string | null
         }
         Update: {
           id?: string
@@ -123,6 +127,8 @@ export interface Database {
           supplier_id?: string | null
           is_active?: boolean | null
           created_at?: string
+          image_url?: string | null
+          image_alt?: string | null
         }
         Relationships: [
           {
