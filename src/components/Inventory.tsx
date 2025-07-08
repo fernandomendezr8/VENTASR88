@@ -434,34 +434,28 @@ const Inventory: React.FC = () => {
     placeholder="Describa el motivo del ajuste..."
     className="w-full p-2 border border-gray-300 rounded"
   />
-
-  <span className="font-semibold text-gray-900">
-    Stock: {selectedItem.quantity}
-  </span>
-</div>
+                </div>
+              )}
+              
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  Stock actual: <span className="font-medium">{selectedItem.quantity} unidades</span>
+                </p>
+                <p className="text-sm text-gray-600">
+                  Nuevo stock: <span className={`font-medium ${
+                    adjustmentData.type === 'add' ? 'text-green-600' : 
+                    adjustmentData.type === 'remove' ? 'text-red-600' : 
+                    'text-blue-600'
+                  }`}>
+                    {adjustmentData.type === 'add' 
+                      ? selectedItem.quantity + adjustmentData.quantity
+                      : adjustmentData.type === 'remove'
+                      ? Math.max(0, selectedItem.quantity - adjustmentData.quantity)
+                      : adjustmentData.quantity
+                    } unidades
+                  </span>
+                </p>
               </div>
-                    <span className="text-sm text-gray-600">Nuevo stock:</span>
-              {adjustmentData.type !== 'set' && (
-                      adjustmentData.type === 'add' ? 'text-green-600' : 'text-red-600'
-                  <p className="text-sm text-gray-600">
-                      {adjustmentData.type === 'add' 
-                        ? selectedItem.quantity + adjustmentData.quantity
-                        : adjustmentData.type === 'remove'
-                        ? Math.max(0, selectedItem.quantity - adjustmentData.quantity)
-                        : adjustmentData.quantity
-                      } unidades
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              {adjustmentData.type === 'set' && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-sm text-gray-600">
-                    Nuevo stock: <span className="font-medium">{adjustmentData.quantity} unidades</span>
-                  </p>
-                </div>
-              )}
 
               <div className="flex justify-end space-x-4 pt-4">
                 <button
