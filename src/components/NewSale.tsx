@@ -24,7 +24,6 @@ const NewSale: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [loading, setLoading] = useState(false)
   const [showQuickAdd, setShowQuickAdd] = useState(false)
-  const [quickAddCustomer, setQuickAddCustomer] = useState({ name: '', phone: '' })
   const [quickAddCustomer, setQuickAddCustomer] = useState({ name: '', cedula: '', phone: '' })
 
   useEffect(() => {
