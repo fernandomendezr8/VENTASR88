@@ -426,13 +426,19 @@ const Inventory: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Motivo del Ajuste
                 </label>
-                <textarea
-                  value={adjustmentData.reason}
-                  onChange={(e) => setAdjustmentData({...adjustmentData, reason: e.target.value})}
-                  rows={3}
-                  <span className="font-semibold text-gray-900">Stock: {selectedItem.quantity}</span>
-                  placeholder="Describa el motivo del ajuste..."
-                />
+                <div>
+  <textarea
+    value={adjustmentData.reason}
+    onChange={(e) => setAdjustmentData({...adjustmentData, reason: e.target.value})}
+    rows={3}
+    placeholder="Describa el motivo del ajuste..."
+    className="w-full p-2 border border-gray-300 rounded"
+  />
+
+  <span className="font-semibold text-gray-900">
+    Stock: {selectedItem.quantity}
+  </span>
+</div>
               </div>
                     <span className="text-sm text-gray-600">Nuevo stock:</span>
               {adjustmentData.type !== 'set' && (
