@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Minus, ShoppingCart, Search, X, Package } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, Search, X, Package, User } from 'lucide-react'
 import { supabase, Product, Customer } from '../lib/supabase'
 
 interface CartItem {
