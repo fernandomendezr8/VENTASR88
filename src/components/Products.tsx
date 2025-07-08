@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Search, Edit2, Trash2, Package, Upload, X, Image as ImageIcon } from 'lucide-react'
-import { supabase, Product, Category, Supplier } from '../lib/supabase'
+import { supabase, Product, Category, Supplier, UnitOfMeasure } from '../lib/supabase'
 import { compressImage, validateImageFile, createPlaceholderImage } from '../utils/imageUtils'
 
 const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [unitsOfMeasure, setUnitsOfMeasure] = useState<UnitOfMeasure[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [supplierFilter, setSupplierFilter] = useState('')
@@ -23,6 +24,7 @@ const Products: React.FC = () => {
     sku: '',
     category_id: '',
     supplier_id: '',
+    unit_of_measure_id: '',
     is_active: true,
     initial_stock: '0',
     image_url: '',
@@ -36,6 +38,7 @@ const Products: React.FC = () => {
     fetchProducts()
     fetchCategories()
     fetchSuppliers()
+    fetchUnitsOfMeasure()
   }, [])
 
   const fetchProducts = async () => {
@@ -45,6 +48,7 @@ const Products: React.FC = () => {
         *,
         category:categories(name),
         supplier:suppliers(name),
+        unit_of_measure:units_of_measure(name, abbreviation),
         inventory(quantity)
       `)
       .order('name')
@@ -68,6 +72,16 @@ const Products: React.FC = () => {
       .order('name')
     
     setSuppliers(data || [])
+  }
+
+  const fetchUnitsOfMeasure = async () => {
+    const { data } = await supabase
+      .from('units_of_measure')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('name', { ascending: true })
+    
+    setUnitsOfMeasure(data || [])
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,6 +115,7 @@ const Products: React.FC = () => {
         sku: formData.sku,
         category_id: formData.category_id || null,
         supplier_id: formData.supplier_id || null,
+        unit_of_measure_id: formData.unit_of_measure_id || null,
         is_active: formData.is_active,
         image_url: finalImageUrl,
         image_alt: formData.image_alt
@@ -151,6 +166,7 @@ const Products: React.FC = () => {
       sku: '',
       category_id: '',
       supplier_id: '',
+      unit_of_measure_id: '',
       is_active: true,
       initial_stock: '0',
       image_url: '',
@@ -170,6 +186,7 @@ const Products: React.FC = () => {
       sku: product.sku || '',
       category_id: product.category_id || '',
       supplier_id: product.supplier_id || '',
+      unit_of_measure_id: product.unit_of_measure_id || '',
       is_active: product.is_active,
       initial_stock: '0',
       image_url: product.image_url || '',
@@ -206,9 +223,6 @@ const Products: React.FC = () => {
     setFormData({...formData, image_url: '', image_alt: ''})
   }
 
-  const getProductImage = (product: Product) => {
-    return product.image_url || createPlaceholderImage(40, 40)
-  }
   const handleDelete = async (id: string) => {
     if (confirm('¿Está seguro de que desea eliminar este producto?')) {
       await supabase.from('products').delete().eq('id', id)
@@ -240,6 +254,25 @@ const Products: React.FC = () => {
       month: '2-digit',
       year: 'numeric'
     })
+  }
+
+  const groupedUnits = unitsOfMeasure.reduce((acc, unit) => {
+    if (!acc[unit.category]) {
+      acc[unit.category] = []
+    }
+    acc[unit.category].push(unit)
+    return acc
+  }, {} as Record<string, UnitOfMeasure[]>)
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      unit: 'Unidades',
+      weight: 'Peso',
+      volume: 'Volumen',
+      length: 'Longitud',
+      area: 'Área'
+    }
+    return labels[category] || category
   }
 
   return (
@@ -379,6 +412,9 @@ const Products: React.FC = () => {
                   Stock
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Unidad
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -392,7 +428,7 @@ const Products: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     {searchTerm ? 'No se encontraron productos' : 'No hay productos registrados'}
                   </td>
                 </tr>
@@ -430,7 +466,12 @@ const Products: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {product.inventory?.[0]?.quantity || 0} unidades
+                        {product.inventory?.[0]?.quantity || 0}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {product.unit_of_measure?.abbreviation || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -613,7 +654,7 @@ const Products: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Categoría
@@ -661,10 +702,14 @@ const Products: React.FC = () => {
                     required
                   >
                     <option value="">Seleccionar unidad</option>
-                    {unitsOfMeasure.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.name} ({unit.abbreviation})
-                      </option>
+                    {Object.entries(groupedUnits).map(([category, units]) => (
+                      <optgroup key={category} label={getCategoryLabel(category)}>
+                        {units.map((unit) => (
+                          <option key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.abbreviation})
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </div>

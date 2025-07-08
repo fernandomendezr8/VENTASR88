@@ -576,17 +576,6 @@ const NewSale: React.FC = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Cédula *</label>
-                <input
-                  type="text"
-                  value={quickAddCustomer.cedula}
-                  onChange={(e) => setQuickAddCustomer({...quickAddCustomer, cedula: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Número de cédula"
-                />
-              </div>
-              
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">IVA (%)</label>
                 <input
                   type="number"

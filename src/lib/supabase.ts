@@ -62,14 +62,6 @@ export interface Product {
   inventory?: { quantity: number }[]
 }
 
-export interface UnitOfMeasure {
-  id: string
-  name: string
-  abbreviation: string
-  category: 'weight' | 'volume' | 'length' | 'area' | 'unit'
-  created_at: string
-}
-
 export interface InventoryItem {
   id: string
   product_id: string
