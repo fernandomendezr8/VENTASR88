@@ -156,25 +156,29 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center">
+          <div className="flex items-center mb-3">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-medium text-sm">A</span>
+              <span className="text-white font-medium text-sm">
+                {user.email?.charAt(0).toUpperCase()}
+              </span>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">Administrador</p>
-              <p className="text-xs text-gray-500">Sistema activo</p>
+              <p className="text-sm font-medium text-gray-900">
+                {user.email?.split('@')[0] || 'Usuario'}
+              </p>
+              <p className="text-xs text-gray-500">
+                {new Date().toLocaleDateString('es-ES')}
+              </p>
             </div>
           </div>
           
-          <div className="p-4 border-t border-blue-700">
-            <button
-              onClick={onLogout}
-              className="w-full flex items-center px-4 py-2 text-blue-200 hover:bg-blue-700 hover:text-white rounded-lg transition-colors"
-            >
-              <LogOut size={20} className="mr-3" />
-              Cerrar Sesión
-            </button>
-          </div>
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors"
+          >
+            <LogOut size={16} className="mr-3" />
+            Cerrar Sesión
+          </button>
         </div>
       </div>
 

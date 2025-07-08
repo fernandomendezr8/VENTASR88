@@ -277,7 +277,7 @@ const Dashboard: React.FC = () => {
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Sales */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Ventas Recientes</h3>
@@ -317,7 +317,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Low Stock Alert */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Productos con Stock Bajo</h3>
@@ -360,6 +360,34 @@ const Dashboard: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+        <h3 className="text-lg font-semibold mb-4">Acciones Rápidas</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button
+            onClick={() => window.location.hash = '#new-sale'}
+            className="bg-white bg-opacity-20 hover:bg-opacity-30 p-4 rounded-lg transition-all duration-200 flex items-center"
+          >
+            <ShoppingCart className="h-6 w-6 mr-3" />
+            <span>Nueva Venta</span>
+          </button>
+          <button
+            onClick={() => window.location.hash = '#products'}
+            className="bg-white bg-opacity-20 hover:bg-opacity-30 p-4 rounded-lg transition-all duration-200 flex items-center"
+          >
+            <Package className="h-6 w-6 mr-3" />
+            <span>Gestionar Productos</span>
+          </button>
+          <button
+            onClick={() => window.location.hash = '#reports'}
+            className="bg-white bg-opacity-20 hover:bg-opacity-30 p-4 rounded-lg transition-all duration-200 flex items-center"
+          >
+            <TrendingUp className="h-6 w-6 mr-3" />
+            <span>Ver Reportes</span>
+          </button>
         </div>
       </div>
     </div>

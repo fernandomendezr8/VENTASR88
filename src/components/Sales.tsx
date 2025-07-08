@@ -13,7 +13,13 @@ const Sales: React.FC = () => {
   const [selectedSale, setSelectedSale] = useState<SaleWithDetails | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending' | 'cancelled'>('all')
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | 'cash' | 'card' | 'transfer'>('all')
   const [dateFilter, setDateFilter] = useState('')
+  const [dateRangeFilter, setDateRangeFilter] = useState({
+    from: '',
+    to: ''
+  })
 
   useEffect(() => {
     fetchSales()
@@ -52,10 +58,15 @@ const Sales: React.FC = () => {
       sale.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.payment_method.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesDate = !dateFilter || 
-      new Date(sale.created_at).toISOString().split('T')[0] === dateFilter
+    const matchesDate = (!dateFilter || 
+      new Date(sale.created_at).toISOString().split('T')[0] === dateFilter) &&
+      (!dateRangeFilter.from || new Date(sale.created_at) >= new Date(dateRangeFilter.from)) &&
+      (!dateRangeFilter.to || new Date(sale.created_at) <= new Date(dateRangeFilter.to + 'T23:59:59'))
     
-    return matchesSearch && matchesDate
+    const matchesStatus = statusFilter === 'all' || sale.status === statusFilter
+    const matchesPayment = paymentMethodFilter === 'all' || sale.payment_method === paymentMethodFilter
+    
+    return matchesSearch && matchesDate && matchesStatus && matchesPayment
   })
 
   const formatCurrency = (amount: number) => {
@@ -135,6 +146,7 @@ const Sales: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
@@ -145,6 +157,8 @@ const Sales: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          
+          {/* Date Filter */}
           <div className="relative">
             <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
@@ -154,6 +168,47 @@ const Sales: React.FC = () => {
               onChange={(e) => setDateFilter(e.target.value)}
             />
           </div>
+          
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Todos los estados</option>
+            <option value="completed">Completadas</option>
+            <option value="pending">Pendientes</option>
+            <option value="cancelled">Canceladas</option>
+          </select>
+          
+          {/* Payment Method Filter */}
+          <select
+            value={paymentMethodFilter}
+            onChange={(e) => setPaymentMethodFilter(e.target.value as any)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Todos los métodos</option>
+            <option value="cash">Efectivo</option>
+            <option value="card">Tarjeta</option>
+            <option value="transfer">Transferencia</option>
+          </select>
+        </div>
+        
+        {/* Date Range Filter */}
+        <div className="flex items-center space-x-2">
+          <input
+            type="date"
+            value={dateRangeFilter.from}
+            onChange={(e) => setDateRangeFilter({...dateRangeFilter, from: e.target.value})}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <span className="text-gray-500">-</span>
+          <input
+            type="date"
+            value={dateRangeFilter.to}
+            onChange={(e) => setDateRangeFilter({...dateRangeFilter, to: e.target.value})}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
       </div>
 

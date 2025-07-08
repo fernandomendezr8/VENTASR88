@@ -430,18 +430,19 @@ const Inventory: React.FC = () => {
                   value={adjustmentData.reason}
                   onChange={(e) => setAdjustmentData({...adjustmentData, reason: e.target.value})}
                   rows={3}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  <span className="font-semibold text-gray-900">Stock: {selectedItem.quantity}</span>
                   placeholder="Describa el motivo del ajuste..."
                 />
               </div>
-
+                    <span className="text-sm text-gray-600">Nuevo stock:</span>
               {adjustmentData.type !== 'set' && (
-                <div className="bg-gray-50 p-3 rounded-lg">
+                      adjustmentData.type === 'add' ? 'text-green-600' : 'text-red-600'
                   <p className="text-sm text-gray-600">
-                    Nuevo stock: <span className="font-medium">
                       {adjustmentData.type === 'add' 
                         ? selectedItem.quantity + adjustmentData.quantity
-                        : Math.max(0, selectedItem.quantity - adjustmentData.quantity)
+                        : adjustmentData.type === 'remove'
+                        ? Math.max(0, selectedItem.quantity - adjustmentData.quantity)
+                        : adjustmentData.quantity
                       } unidades
                     </span>
                   </p>

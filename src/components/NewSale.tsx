@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Minus, ShoppingCart, Search, X, Package, User } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, Search, X, Package, User, Calculator, Percent, Receipt, AlertCircle } from 'lucide-react'
 import { supabase, Product, Customer } from '../lib/supabase'
 
 interface CartItem {
@@ -18,8 +18,12 @@ const NewSale: React.FC = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [discount, setDiscount] = useState(0)
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage')
   const [tax, setTax] = useState(21)
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [loading, setLoading] = useState(false)
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const [quickAddCustomer, setQuickAddCustomer] = useState({ name: '', phone: '' })
 
   useEffect(() => {
     fetchProducts()
@@ -28,13 +32,13 @@ const NewSale: React.FC = () => {
 
   useEffect(() => {
     if (customerSearch.trim() === '') {
-      setFilteredCustomers(customers)
+      setFilteredCustomers(customers.slice(0, 10)) // Limit to 10 for performance
     } else {
       const filtered = customers.filter(customer =>
         customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
         customer.phone?.toLowerCase().includes(customerSearch.toLowerCase()) ||
         customer.email?.toLowerCase().includes(customerSearch.toLowerCase())
-      )
+      ).slice(0, 10)
       setFilteredCustomers(filtered)
     }
   }, [customerSearch, customers])
@@ -48,6 +52,7 @@ const NewSale: React.FC = () => {
         inventory(quantity)
       `)
       .eq('is_active', true)
+      .order('name')
     
     setProducts(data || [])
   }
@@ -71,6 +76,35 @@ const NewSale: React.FC = () => {
     setSelectedCustomer('')
     setCustomerSearch('')
     setShowCustomerDropdown(false)
+  }
+
+  const addQuickCustomer = async () => {
+    if (!quickAddCustomer.name.trim()) {
+      alert('El nombre del cliente es requerido')
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .insert({
+          name: quickAddCustomer.name,
+          phone: quickAddCustomer.phone
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setCustomers([...customers, data])
+      setSelectedCustomer(data.id)
+      setCustomerSearch(data.name)
+      setQuickAddCustomer({ name: '', phone: '' })
+      setShowQuickAdd(false)
+    } catch (error) {
+      console.error('Error adding customer:', error)
+      alert('Error al agregar el cliente')
+    }
   }
 
   const addToCart = (product: Product) => {
@@ -119,13 +153,20 @@ const NewSale: React.FC = () => {
   }
 
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0)
-  const discountAmount = subtotal * (discount / 100)
+  const discountAmount = discountType === 'percentage' 
+    ? subtotal * (discount / 100)
+    : Math.min(discount, subtotal)
   const taxAmount = (subtotal - discountAmount) * (tax / 100)
   const total = subtotal - discountAmount + taxAmount
 
   const processSale = async () => {
     if (cart.length === 0) {
       alert('El carrito está vacío')
+      return
+    }
+
+    if (total <= 0) {
+      alert('El total de la venta debe ser mayor a 0')
       return
     }
 
@@ -141,7 +182,7 @@ const NewSale: React.FC = () => {
           tax: taxAmount,
           total_amount: total,
           status: 'completed',
-          payment_method: 'cash'
+          payment_method: paymentMethod
         })
         .select()
         .single()
@@ -185,13 +226,12 @@ const NewSale: React.FC = () => {
         .insert({
           type: 'sale',
           amount: total,
-          description: `Venta #${sale.id.slice(-8)}`,
+          description: `Venta #${sale.id.slice(-8)} - ${paymentMethod === 'cash' ? 'Efectivo' : paymentMethod === 'card' ? 'Tarjeta' : 'Transferencia'}`,
           reference_id: sale.id
         })
 
       if (cashError) {
         console.error('Error adding cash register entry:', cashError)
-        // Don't fail the sale if cash register fails, just log it
       }
 
       // Reset form
@@ -199,8 +239,12 @@ const NewSale: React.FC = () => {
       setSelectedCustomer('')
       setCustomerSearch('')
       setDiscount(0)
+      setDiscountType('percentage')
       setSearchTerm('')
-      alert('¡Venta procesada exitosamente!')
+      setPaymentMethod('cash')
+      
+      // Show success message
+      alert(`¡Venta procesada exitosamente!\nTotal: ${formatCurrency(total)}\nID: #${sale.id.slice(-8)}`)
       
       // Refresh products to update stock
       fetchProducts()
@@ -226,12 +270,21 @@ const NewSale: React.FC = () => {
     }).format(amount)
   }
 
+  const getTotalItems = () => {
+    return cart.reduce((sum, item) => sum + item.quantity, 0)
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Products Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Productos Disponibles</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Productos Disponibles</h3>
+            <div className="text-sm text-gray-500">
+              {filteredProducts.length} productos
+            </div>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
@@ -274,12 +327,20 @@ const NewSale: React.FC = () => {
                             </>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500">
-                          Stock: {stock} {inCart > 0 && `(${inCart} en carrito)`}
-                        </p>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <span className={`${stock <= 5 ? 'text-red-600' : 'text-gray-500'}`}>
+                            Stock: {stock}
+                          </span>
+                          {inCart > 0 && (
+                            <span className="text-blue-600 bg-blue-100 px-2 py-1 rounded text-xs">
+                              {inCart} en carrito
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-gray-900">{formatCurrency(product.price)}</p>
+                        <p className="text-xs text-gray-500">Costo: {formatCurrency(product.cost)}</p>
                       </div>
                     </div>
                     <button
@@ -299,25 +360,66 @@ const NewSale: React.FC = () => {
       </div>
 
       {/* Cart Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Carrito de Compras</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Carrito de Compras</h3>
+            <div className="flex items-center space-x-2">
+              <ShoppingCart className="h-5 w-5 text-gray-400" />
+              <span className="text-sm text-gray-500">{getTotalItems()} artículos</span>
+            </div>
+          </div>
           
           {/* Customer Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Cliente (opcional)</label>
-            <select
-              value={selectedCustomer}
-              onChange={(e) => setSelectedCustomer(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Cliente general</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700">Cliente</label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar cliente por nombre, teléfono o email..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={customerSearch}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value)
+                  setShowCustomerDropdown(true)
+                }}
+                onFocus={() => setShowCustomerDropdown(true)}
+              />
+              
+              {/* Customer Dropdown */}
+              {showCustomerDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="p-2 border-b border-gray-200">
+                    <button
+                      onClick={() => setShowQuickAdd(true)}
+                      className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                    >
+                      + Agregar nuevo cliente
+                    </button>
+                  </div>
+                  <div className="p-1">
+                    <button
+                      onClick={clearCustomerSelection}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
+                    >
+                      Cliente general (sin registro)
+                    </button>
+                    {filteredCustomers.map((customer) => (
+                      <button
+                        key={customer.id}
+                        onClick={() => handleCustomerSelect(customer)}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
+                      >
+                        <div className="font-medium">{customer.name}</div>
+                        {customer.phone && (
+                          <div className="text-xs text-gray-500">{customer.phone}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -388,17 +490,51 @@ const NewSale: React.FC = () => {
           )}
           
           <div className="space-y-4">
+            {/* Payment Method */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Método de Pago</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value as any)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="cash">Efectivo</option>
+                <option value="card">Tarjeta</option>
+                <option value="transfer">Transferencia</option>
+              </select>
+            </div>
+
+            {/* Discount and Tax */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descuento (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={discount}
-                  onChange={(e) => setDiscount(Number(e.target.value))}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="flex items-center">
+                    <Percent className="h-4 w-4 mr-1" />
+                    Descuento
+                  </div>
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max={discountType === 'percentage' ? "100" : subtotal.toString()}
+                    step={discountType === 'percentage' ? "1" : "0.01"}
+                    value={discount}
+                    onChange={(e) => setDiscount(Number(e.target.value))}
+                    className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <select
+                    value={discountType}
+                    onChange={(e) => {
+                      setDiscountType(e.target.value as any)
+                      setDiscount(0)
+                    }}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="percentage">%</option>
+                    <option value="fixed">€</option>
+                  </select>
+                </div>
               </div>
               
               <div>
@@ -414,14 +550,15 @@ const NewSale: React.FC = () => {
               </div>
             </div>
 
+            {/* Totals */}
             <div className="border-t pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
-              {discount > 0 && (
+              {discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
-                  <span>Descuento ({discount}%):</span>
+                  <span>Descuento ({discountType === 'percentage' ? `${discount}%` : 'Fijo'}):</span>
                   <span>-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
@@ -431,25 +568,83 @@ const NewSale: React.FC = () => {
               </div>
               <div className="flex justify-between font-bold text-lg border-t pt-2">
                 <span>Total:</span>
-                <span>{formatCurrency(total)}</span>
+                <span className="text-green-600">{formatCurrency(total)}</span>
               </div>
             </div>
 
+            {/* Validation Warnings */}
+            {cart.length > 0 && total <= 0 && (
+              <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
+                <span className="text-sm text-yellow-800">El total debe ser mayor a 0</span>
+              </div>
+            )}
+
             <button
               onClick={processSale}
-              disabled={cart.length === 0 || loading}
+              disabled={cart.length === 0 || loading || total <= 0}
               className="w-full bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
               {loading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
               ) : (
-                <ShoppingCart size={20} className="mr-2" />
+                <Receipt size={20} className="mr-2" />
               )}
               {loading ? 'Procesando...' : 'Procesar Venta'}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Quick Add Customer Modal */}
+      {showQuickAdd && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Agregar Cliente Rápido</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre *</label>
+                <input
+                  type="text"
+                  value={quickAddCustomer.name}
+                  onChange={(e) => setQuickAddCustomer({...quickAddCustomer, name: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nombre del cliente"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                <input
+                  type="tel"
+                  value={quickAddCustomer.phone}
+                  onChange={(e) => setQuickAddCustomer({...quickAddCustomer, phone: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Teléfono del cliente"
+                />
+              </div>
+              <div className="flex justify-end space-x-4 pt-4">
+                <button
+                  onClick={() => {
+                    setShowQuickAdd(false)
+                    setQuickAddCustomer({ name: '', phone: '' })
+                  }}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={addQuickCustomer}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Click outside to close dropdown */}
       {showCustomerDropdown && (
