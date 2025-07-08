@@ -11,8 +11,11 @@ interface CartItem {
 const NewSale: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<string>('')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [discount, setDiscount] = useState(0)
   const [tax, setTax] = useState(21)
@@ -22,6 +25,19 @@ const NewSale: React.FC = () => {
     fetchProducts()
     fetchCustomers()
   }, [])
+
+  useEffect(() => {
+    if (customerSearch.trim() === '') {
+      setFilteredCustomers(customers)
+    } else {
+      const filtered = customers.filter(customer =>
+        customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        customer.phone?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        customer.email?.toLowerCase().includes(customerSearch.toLowerCase())
+      )
+      setFilteredCustomers(filtered)
+    }
+  }, [customerSearch, customers])
 
   const fetchProducts = async () => {
     const { data } = await supabase
@@ -43,6 +59,18 @@ const NewSale: React.FC = () => {
       .order('name')
     
     setCustomers(data || [])
+  }
+
+  const handleCustomerSelect = (customer: Customer) => {
+    setSelectedCustomer(customer.id)
+    setCustomerSearch(customer.name)
+    setShowCustomerDropdown(false)
+  }
+
+  const clearCustomerSelection = () => {
+    setSelectedCustomer('')
+    setCustomerSearch('')
+    setShowCustomerDropdown(false)
   }
 
   const addToCart = (product: Product) => {
@@ -169,6 +197,7 @@ const NewSale: React.FC = () => {
       // Reset form
       setCart([])
       setSelectedCustomer('')
+      setCustomerSearch('')
       setDiscount(0)
       setSearchTerm('')
       alert('¡Venta procesada exitosamente!')
@@ -207,7 +236,7 @@ const NewSale: React.FC = () => {
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Buscar productos..."
+              placeholder="Buscar por nombre, SKU o categoría..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -234,7 +263,17 @@ const NewSale: React.FC = () => {
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900">{product.name}</h4>
-                        <p className="text-sm text-gray-500">{product.category?.name}</p>
+                        <div className="flex items-center space-x-2 text-sm text-gray-500">
+                          <span>{product.category?.name || 'Sin categoría'}</span>
+                          {product.sku && (
+                            <>
+                              <span>•</span>
+                              <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                                {product.sku}
+                              </span>
+                            </>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500">
                           Stock: {stock} {inCart > 0 && `(${inCart} en carrito)`}
                         </p>
@@ -328,6 +367,26 @@ const NewSale: React.FC = () => {
 
         {/* Totals and Checkout */}
         <div className="p-6 border-t border-gray-200">
+          {/* Selected Customer Display */}
+          {selectedCustomer && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <User className="h-4 w-4 text-blue-600 mr-2" />
+                  <span className="text-sm font-medium text-blue-900">
+                    Cliente: {customers.find(c => c.id === selectedCustomer)?.name}
+                  </span>
+                </div>
+                <button
+                  onClick={clearCustomerSelection}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -391,6 +450,14 @@ const NewSale: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Click outside to close dropdown */}
+      {showCustomerDropdown && (
+        <div 
+          className="fixed inset-0 z-5" 
+          onClick={() => setShowCustomerDropdown(false)}
+        />
+      )}
     </div>
   )
 }
