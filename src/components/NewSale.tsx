@@ -436,7 +436,6 @@ const NewSale: React.FC = () => {
                           {customer.cedula && customer.phone && ' • '}
                           {customer.phone}
                         </div>
-                        )}
                       </button>
                     ))}
                   </div>
