@@ -7,6 +7,9 @@ import Products from './components/Products'
 import Customers from './components/Customers'
 import Suppliers from './components/Suppliers'
 import Categories from './components/Categories'
+import Reports from './components/Reports'
+import Inventory from './components/Inventory'
+import CashRegister from './components/CashRegister'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -28,11 +31,11 @@ function App() {
       case 'customers':
         return <Customers />
       case 'inventory':
-        return <div className="text-center py-12 text-gray-500">Módulo de Inventario - Próximamente</div>
+        return <Inventory />
       case 'cash-register':
-        return <div className="text-center py-12 text-gray-500">Módulo de Caja - Próximamente</div>
+        return <CashRegister />
       case 'reports':
-        return <div className="text-center py-12 text-gray-500">Módulo de Reportes - Próximamente</div>
+        return <Reports />
       default:
         return <Dashboard />
     }
