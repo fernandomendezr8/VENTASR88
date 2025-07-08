@@ -9,6 +9,7 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -18,6 +19,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
 
     try {
       if (isLogin) {
@@ -30,7 +32,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         onAuthSuccess()
       } else {
         if (formData.password !== formData.confirmPassword) {
-          alert('Las contraseñas no coinciden')
+          setError('Las contraseñas no coinciden')
+          setLoading(false)
           return
         }
 
@@ -41,12 +44,31 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         
         if (error) throw error
         
-        alert('Cuenta creada exitosamente. Ya puedes iniciar sesión.')
+        setError('')
         setIsLogin(true)
         setFormData({ email: '', password: '', confirmPassword: '' })
+        // Show success message briefly
+        const successMsg = document.createElement('div')
+        successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+        successMsg.textContent = 'Cuenta creada exitosamente. Ya puedes iniciar sesión.'
+        document.body.appendChild(successMsg)
+        setTimeout(() => document.body.removeChild(successMsg), 3000)
       }
     } catch (error: any) {
-      alert(error.message || 'Error en la autenticación')
+      // Handle specific error cases
+      if (error.message?.includes('Invalid login credentials')) {
+        setError(isLogin 
+          ? 'Email o contraseña incorrectos. Verifica tus credenciales o regístrate si no tienes cuenta.'
+          : 'Error al crear la cuenta. Verifica que el email sea válido.')
+      } else if (error.message?.includes('User already registered')) {
+        setError('Este email ya está registrado. Intenta iniciar sesión.')
+      } else if (error.message?.includes('Password should be at least')) {
+        setError('La contraseña debe tener al menos 6 caracteres.')
+      } else if (error.message?.includes('Invalid email')) {
+        setError('Por favor ingresa un email válido.')
+      } else {
+        setError(error.message || 'Error en la autenticación. Intenta nuevamente.')
+      }
     } finally {
       setLoading(false)
     }
@@ -66,6 +88,12 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             {isLogin ? 'Inicia sesión para continuar' : 'Crea tu cuenta para comenzar'}
           </p>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -136,6 +164,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           <button
             onClick={() => {
               setIsLogin(!isLogin)
+              setError('')
               setFormData({ email: '', password: '', confirmPassword: '' })
             }}
             className="text-blue-600 hover:text-blue-700 font-medium"
