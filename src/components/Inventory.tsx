@@ -426,16 +426,14 @@ const Inventory: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Motivo del Ajuste
                 </label>
-                <div>
-  <textarea
-    value={adjustmentData.reason}
-    onChange={(e) => setAdjustmentData({...adjustmentData, reason: e.target.value})}
-    rows={3}
-    placeholder="Describa el motivo del ajuste..."
-    className="w-full p-2 border border-gray-300 rounded"
-  />
-                </div>
-              )}
+                <textarea
+                  value={adjustmentData.reason}
+                  onChange={(e) => setAdjustmentData({...adjustmentData, reason: e.target.value})}
+                  rows={3}
+                  placeholder="Describa el motivo del ajuste..."
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              </div>
               
               <div className="bg-gray-50 p-3 rounded-lg">
                 <p className="text-sm text-gray-600">
