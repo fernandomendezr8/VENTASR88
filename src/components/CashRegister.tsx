@@ -215,7 +215,7 @@ const CashRegister: React.FC = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
-      currency: 'EUR'
+      currency: 'COP'
     }).format(amount)
   }
 
