@@ -13,16 +13,21 @@ import {
   TrendingUp,
   FileText,
   UserCheck,
-  Building2
+  Building2,
+  LogOut,
+  User
 } from 'lucide-react'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface LayoutProps {
   children: React.ReactNode
   currentPage: string
   onPageChange: (page: string) => void
+  user: SupabaseUser
+  onLogout: () => void
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) => {
+const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, user, onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
 
   const menuSections = [
@@ -86,6 +91,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
             <div>
               <h1 className="text-lg font-bold text-white">VentasPro</h1>
               <p className="text-xs text-blue-100">Sistema de Gestión</p>
+              <p className="text-blue-200 text-sm mt-1">{user.email}</p>
             </div>
           </div>
           <button
@@ -158,6 +164,16 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
               <p className="text-sm font-medium text-gray-900">Administrador</p>
               <p className="text-xs text-gray-500">Sistema activo</p>
             </div>
+          </div>
+          
+          <div className="p-4 border-t border-blue-700">
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center px-4 py-2 text-blue-200 hover:bg-blue-700 hover:text-white rounded-lg transition-colors"
+            >
+              <LogOut size={20} className="mr-3" />
+              Cerrar Sesión
+            </button>
           </div>
         </div>
       </div>
