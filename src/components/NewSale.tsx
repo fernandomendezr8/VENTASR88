@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Minus, ShoppingCart, Search, X, Package, User, Calculator, Percent, Receipt, AlertCircle } from 'lucide-react'
 import { supabase, Product, Customer } from '../lib/supabase'
+import { createPlaceholderImage } from '../utils/imageUtils'
 
 interface CartItem {
   product: Product
@@ -313,6 +314,19 @@ const NewSale: React.FC = () => {
                 
                 return (
                   <div key={product.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    {/* Product Image */}
+                    <div className="w-full h-32 mb-3 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.image_alt || product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="h-8 w-8 text-gray-400" />
+                      )}
+                    </div>
+                    
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900">{product.name}</h4>
@@ -433,9 +447,23 @@ const NewSale: React.FC = () => {
             <div className="space-y-4">
               {cart.map((item) => (
                 <div key={item.product.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    {/* Product Image */}
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      {item.product.image_url ? (
+                        <img 
+                          src={item.product.image_url} 
+                          alt={item.product.image_alt || item.product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="h-6 w-6 text-gray-400" />
+                      )}
+                    </div>
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900">{item.product.name}</h4>
                     <p className="text-sm text-gray-500">{formatCurrency(item.product.price)} c/u</p>
+                  </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button

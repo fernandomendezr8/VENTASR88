@@ -44,6 +44,8 @@ export interface Product {
   supplier_id: string
   is_active: boolean
   created_at: string
+  image_url?: string
+  image_alt?: string
   category?: Category
   supplier?: Supplier
   inventory?: { quantity: number }[]

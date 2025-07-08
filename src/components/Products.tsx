@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Package, Upload, X, Image as ImageIcon } from 'lucide-react'
 import { supabase, Product, Category, Supplier } from '../lib/supabase'
+import { compressImage, validateImageFile, createPlaceholderImage } from '../utils/imageUtils'
 
 const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([])
@@ -23,8 +24,13 @@ const Products: React.FC = () => {
     category_id: '',
     supplier_id: '',
     is_active: true,
-    initial_stock: '0'
+    initial_stock: '0',
+    image_url: '',
+    image_alt: ''
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>('')
+  const [imageLoading, setImageLoading] = useState(false)
 
   useEffect(() => {
     fetchProducts()
@@ -69,6 +75,24 @@ const Products: React.FC = () => {
     setLoading(true)
 
     try {
+      let finalImageUrl = formData.image_url
+      
+      // Process image if a new one was uploaded
+      if (imageFile) {
+        setImageLoading(true)
+        try {
+          const compressed = await compressImage(imageFile, 400, 400, 0.7)
+          finalImageUrl = compressed.dataUrl
+        } catch (error) {
+          console.error('Error compressing image:', error)
+          alert('Error al procesar la imagen')
+          setImageLoading(false)
+          setLoading(false)
+          return
+        }
+        setImageLoading(false)
+      }
+
       const productData = {
         name: formData.name,
         description: formData.description,
@@ -77,7 +101,9 @@ const Products: React.FC = () => {
         sku: formData.sku,
         category_id: formData.category_id || null,
         supplier_id: formData.supplier_id || null,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        image_url: finalImageUrl,
+        image_alt: formData.image_alt
       }
 
       if (editingProduct) {
@@ -126,8 +152,12 @@ const Products: React.FC = () => {
       category_id: '',
       supplier_id: '',
       is_active: true,
-      initial_stock: '0'
+      initial_stock: '0',
+      image_url: '',
+      image_alt: ''
     })
+    setImageFile(null)
+    setImagePreview('')
   }
 
   const handleEdit = (product: Product) => {
@@ -141,11 +171,44 @@ const Products: React.FC = () => {
       category_id: product.category_id || '',
       supplier_id: product.supplier_id || '',
       is_active: product.is_active,
-      initial_stock: '0'
+      initial_stock: '0',
+      image_url: product.image_url || '',
+      image_alt: product.image_alt || ''
     })
+    setImageFile(null)
+    setImagePreview(product.image_url || '')
     setShowModal(true)
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validation = validateImageFile(file)
+    if (!validation.valid) {
+      alert(validation.error)
+      return
+    }
+
+    setImageFile(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const removeImage = () => {
+    setImageFile(null)
+    setImagePreview('')
+    setFormData({...formData, image_url: '', image_alt: ''})
+  }
+
+  const getProductImage = (product: Product) => {
+    return product.image_url || createPlaceholderImage(40, 40)
+  }
   const handleDelete = async (id: string) => {
     if (confirm('¿Está seguro de que desea eliminar este producto?')) {
       await supabase.from('products').delete().eq('id', id)
@@ -339,8 +402,16 @@ const Products: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <Package className="h-5 w-5 text-blue-600" />
+                          <div className="h-10 w-10 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                            {product.image_url ? (
+                              <img 
+                                src={product.image_url} 
+                                alt={product.image_alt || product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Package className="h-5 w-5 text-gray-400" />
+                            )}
                           </div>
                         </div>
                         <div className="ml-4">
@@ -407,6 +478,67 @@ const Products: React.FC = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {/* Image Upload Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Imagen del Producto
+                </label>
+                <div className="flex items-start space-x-4">
+                  {/* Image Preview */}
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                      {imagePreview || formData.image_url ? (
+                        <img 
+                          src={imagePreview || formData.image_url} 
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="h-8 w-8 text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Upload Controls */}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex space-x-2">
+                      <label className="cursor-pointer bg-blue-50 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors flex items-center text-sm">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Subir Imagen
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      {(imagePreview || formData.image_url) && (
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition-colors flex items-center text-sm"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      JPG, PNG o WebP. Máximo 5MB. Se comprimirá automáticamente.
+                    </p>
+                    
+                    {/* Alt Text */}
+                    <input
+                      type="text"
+                      value={formData.image_alt}
+                      onChange={(e) => setFormData({...formData, image_alt: e.target.value})}
+                      placeholder="Descripción de la imagen (opcional)"
+                      className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -562,10 +694,19 @@ const Products: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                  disabled={loading || imageLoading}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center"
                 >
-                  {loading ? 'Guardando...' : 'Guardar'}
+                  {imageLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Procesando imagen...
+                    </>
+                  ) : loading ? (
+                    'Guardando...'
+                  ) : (
+                    'Guardar'
+                  )}
                 </button>
               </div>
             </form>
