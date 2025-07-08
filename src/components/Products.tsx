@@ -416,27 +416,21 @@ const Products: React.FC = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500">
-                            SKU: {product.sku || 'N/A'} | {product.unit_of_measure?.abbreviation || 'und'}
-                          </div>
+                          <div className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{product.category?.name || 'Sin categoría'}</div>
-                      <div className="text-sm text-gray-500">
-                        {product.supplier?.name || 'Sin proveedor'} | {product.unit_of_measure?.abbreviation || 'und'}
-                      </div>
+                      <div className="text-sm text-gray-500">{product.supplier?.name || 'Sin proveedor'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{formatCurrency(product.price)}</div>
-                      <div className="text-sm text-gray-500">
-                        Costo: {formatCurrency(product.cost)}/{product.unit_of_measure?.abbreviation || 'und'}
-                      </div>
+                      <div className="text-sm text-gray-500">Costo: {formatCurrency(product.cost)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {product.inventory?.[0]?.quantity || 0} {product.unit_of_measure?.abbreviation || 'und'}
+                        {product.inventory?.[0]?.quantity || 0} unidades
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -651,6 +645,25 @@ const Products: React.FC = () => {
                     {suppliers.map((supplier) => (
                       <option key={supplier.id} value={supplier.id}>
                         {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Unidad de Medida *
+                  </label>
+                  <select
+                    value={formData.unit_of_measure_id}
+                    onChange={(e) => setFormData({...formData, unit_of_measure_id: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Seleccionar unidad</option>
+                    {unitsOfMeasure.map((unit) => (
+                      <option key={unit.id} value={unit.id}>
+                        {unit.name} ({unit.abbreviation})
                       </option>
                     ))}
                   </select>

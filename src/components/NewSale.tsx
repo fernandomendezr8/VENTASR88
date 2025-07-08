@@ -470,7 +470,9 @@ const NewSale: React.FC = () => {
                     </div>
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900">{item.product.name}</h4>
-                    <p className="text-sm text-gray-500">{formatCurrency(item.product.price)} c/u</p>
+                    <p className="text-sm text-gray-500">
+                      {formatCurrency(item.product.price)}/{item.product.unit_of_measure?.abbreviation || 'und'}
+                    </p>
                   </div>
                   </div>
                   <div className="flex items-center space-x-2">
