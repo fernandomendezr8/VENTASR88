@@ -43,13 +43,23 @@ export interface Product {
   sku: string
   category_id: string
   supplier_id: string
+  unit_of_measure_id: string
   is_active: boolean
   created_at: string
   image_url?: string
   image_alt?: string
   category?: Category
   supplier?: Supplier
+  unit_of_measure?: UnitOfMeasure
   inventory?: { quantity: number }[]
+}
+
+export interface UnitOfMeasure {
+  id: string
+  name: string
+  abbreviation: string
+  category: 'weight' | 'volume' | 'length' | 'area' | 'unit'
+  created_at: string
 }
 
 export interface InventoryItem {

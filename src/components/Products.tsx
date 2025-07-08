@@ -416,21 +416,27 @@ const Products: React.FC = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">
+                            SKU: {product.sku || 'N/A'} | {product.unit_of_measure?.abbreviation || 'und'}
+                          </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{product.category?.name || 'Sin categoría'}</div>
-                      <div className="text-sm text-gray-500">{product.supplier?.name || 'Sin proveedor'}</div>
+                      <div className="text-sm text-gray-500">
+                        {product.supplier?.name || 'Sin proveedor'} | {product.unit_of_measure?.abbreviation || 'und'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{formatCurrency(product.price)}</div>
-                      <div className="text-sm text-gray-500">Costo: {formatCurrency(product.cost)}</div>
+                      <div className="text-sm text-gray-500">
+                        Costo: {formatCurrency(product.cost)}/{product.unit_of_measure?.abbreviation || 'und'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {product.inventory?.[0]?.quantity || 0} unidades
+                        {product.inventory?.[0]?.quantity || 0} {product.unit_of_measure?.abbreviation || 'und'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
