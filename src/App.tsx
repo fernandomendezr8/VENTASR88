@@ -81,14 +81,14 @@ function App() {
   }
 
   return (
-    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-      {renderPage()}
     <Layout 
-      currentView={currentView} 
-      onViewChange={setCurrentView}
+      currentPage={currentPage} 
+      onPageChange={setCurrentPage}
       user={user}
       onLogout={() => supabase.auth.signOut()}
-    />
+    >
+      {renderPage()}
+    </Layout>
   )
 }
 
