@@ -64,6 +64,7 @@ export interface Database {
         Row: {
           id: string
           name: string
+          cedula: string | null
           email: string | null
           phone: string | null
           address: string | null
@@ -72,6 +73,7 @@ export interface Database {
         Insert: {
           id?: string
           name: string
+          cedula?: string | null
           email?: string | null
           phone?: string | null
           address?: string | null
@@ -80,6 +82,7 @@ export interface Database {
         Update: {
           id?: string
           name?: string
+          cedula?: string | null
           email?: string | null
           phone?: string | null
           address?: string | null

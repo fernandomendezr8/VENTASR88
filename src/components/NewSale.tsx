@@ -25,6 +25,7 @@ const NewSale: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [quickAddCustomer, setQuickAddCustomer] = useState({ name: '', phone: '' })
+  const [quickAddCustomer, setQuickAddCustomer] = useState({ name: '', cedula: '', phone: '' })
 
   useEffect(() => {
     fetchProducts()
@@ -37,6 +38,7 @@ const NewSale: React.FC = () => {
     } else {
       const filtered = customers.filter(customer =>
         customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        customer.cedula?.toLowerCase().includes(customerSearch.toLowerCase()) ||
         customer.phone?.toLowerCase().includes(customerSearch.toLowerCase()) ||
         customer.email?.toLowerCase().includes(customerSearch.toLowerCase())
       ).slice(0, 10)
@@ -80,8 +82,8 @@ const NewSale: React.FC = () => {
   }
 
   const addQuickCustomer = async () => {
-    if (!quickAddCustomer.name.trim()) {
-      alert('El nombre del cliente es requerido')
+    if (!quickAddCustomer.name.trim() || !quickAddCustomer.cedula.trim()) {
+      alert('El nombre y la cédula del cliente son requeridos')
       return
     }
 
@@ -90,6 +92,7 @@ const NewSale: React.FC = () => {
         .from('customers')
         .insert({
           name: quickAddCustomer.name,
+          cedula: quickAddCustomer.cedula,
           phone: quickAddCustomer.phone
         })
         .select()
@@ -100,11 +103,15 @@ const NewSale: React.FC = () => {
       setCustomers([...customers, data])
       setSelectedCustomer(data.id)
       setCustomerSearch(data.name)
-      setQuickAddCustomer({ name: '', phone: '' })
+      setQuickAddCustomer({ name: '', cedula: '', phone: '' })
       setShowQuickAdd(false)
     } catch (error) {
       console.error('Error adding customer:', error)
-      alert('Error al agregar el cliente')
+      if (error.message?.includes('duplicate key')) {
+        alert('Ya existe un cliente con esta cédula')
+      } else {
+        alert('Error al agregar el cliente')
+      }
     }
   }
 
@@ -390,7 +397,7 @@ const NewSale: React.FC = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Buscar cliente por nombre, teléfono o email..."
+                placeholder="Buscar cliente por nombre, cédula, teléfono o email..."
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={customerSearch}
                 onChange={(e) => {
@@ -425,8 +432,11 @@ const NewSale: React.FC = () => {
                         className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                       >
                         <div className="font-medium">{customer.name}</div>
-                        {customer.phone && (
-                          <div className="text-xs text-gray-500">{customer.phone}</div>
+                        <div className="text-xs text-gray-500">
+                          {customer.cedula && `CC: ${customer.cedula}`}
+                          {customer.cedula && customer.phone && ' • '}
+                          {customer.phone}
+                        </div>
                         )}
                       </button>
                     ))}
@@ -566,6 +576,17 @@ const NewSale: React.FC = () => {
               </div>
               
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cédula *</label>
+                <input
+                  type="text"
+                  value={quickAddCustomer.cedula}
+                  onChange={(e) => setQuickAddCustomer({...quickAddCustomer, cedula: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Número de cédula"
+                />
+              </div>
+              
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">IVA (%)</label>
                 <input
                   type="number"
@@ -656,7 +677,7 @@ const NewSale: React.FC = () => {
                 <button
                   onClick={() => {
                     setShowQuickAdd(false)
-                    setQuickAddCustomer({ name: '', phone: '' })
+                    setQuickAddCustomer({ name: '', cedula: '', phone: '' })
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >

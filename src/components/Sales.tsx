@@ -3,7 +3,7 @@ import { Search, Eye, Calendar, DollarSign, ShoppingCart, User } from 'lucide-re
 import { supabase, Sale, SaleItem } from '../lib/supabase'
 
 interface SaleWithDetails extends Sale {
-  customer?: { name: string }
+  customer?: { name: string; cedula?: string }
   sale_items?: (SaleItem & { product?: { name: string } })[]
 }
 
@@ -31,7 +31,7 @@ const Sales: React.FC = () => {
         .from('sales')
         .select(`
           *,
-          customer:customers(name),
+          customer:customers(name, cedula),
           sale_items(
             *,
             product:products(name)
@@ -55,6 +55,7 @@ const Sales: React.FC = () => {
   const filteredSales = sales.filter(sale => {
     const matchesSearch = 
       sale.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sale.customer?.cedula?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.payment_method.toLowerCase().includes(searchTerm.toLowerCase())
     
@@ -151,7 +152,7 @@ const Sales: React.FC = () => {
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Buscar ventas..."
+              placeholder="Buscar por cliente, cédula, ID venta..."
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -318,6 +319,11 @@ const Sales: React.FC = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {sale.customer?.name || 'Cliente general'}
                           </div>
+                         {sale.customer?.cedula && (
+                           <div className="text-xs text-gray-500">
+                             CC: {sale.customer.cedula}
+                           </div>
+                         )}
                         </div>
                       </div>
                     </td>

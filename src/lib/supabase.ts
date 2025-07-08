@@ -27,6 +27,7 @@ export interface Supplier {
 export interface Customer {
   id: string
   name: string
+  cedula: string
   email: string
   phone: string
   address: string
