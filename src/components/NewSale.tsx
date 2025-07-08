@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Minus, ShoppingCart, Search, X, Package, User, Calculator, Percent, Receipt, AlertCircle, Scan, CreditCard, DollarSign, Trash2, Edit3, Clock, CheckCircle } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, Search, X, Package, User, Calculator, Percent, Receipt, AlertCircle, Scan, CreditCard, DollarSign, Trash2, Edit3, Clock, CheckCircle, Grid3X3, List } from 'lucide-react'
 import { supabase, Product, Customer } from '../lib/supabase'
 
 interface CartItem {
@@ -38,6 +38,7 @@ const NewSale: React.FC = () => {
   const [cashReceived, setCashReceived] = useState('')
   const [saleCompleted, setSaleCompleted] = useState(false)
   const [lastSaleId, setLastSaleId] = useState('')
+  const [productsViewMode, setProductsViewMode] = useState<'grid' | 'list'>('grid')
 
   useEffect(() => {
     fetchProducts()
@@ -148,8 +149,8 @@ const NewSale: React.FC = () => {
       setCart([...cart, { product, quantity: 1, total: product.price }])
     }
     
-    // Auto switch to cart view when adding items
-    if (currentView === 'products') {
+    // Auto switch to cart view on mobile when adding items
+    if (window.innerWidth < 1024) {
       setCurrentView('cart')
     }
   }
@@ -326,11 +327,11 @@ const NewSale: React.FC = () => {
   if (saleCompleted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 lg:p-8 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">¡Venta Completada!</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4">¡Venta Completada!</h2>
           <p className="text-gray-600 mb-6">
             La venta se ha procesado exitosamente
           </p>
@@ -338,7 +339,7 @@ const NewSale: React.FC = () => {
             <p className="text-sm text-gray-600">ID de Venta</p>
             <p className="text-lg font-mono font-bold text-gray-900">#{lastSaleId.slice(-8)}</p>
             <p className="text-sm text-gray-600 mt-2">Total</p>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(total)}</p>
+            <p className="text-xl lg:text-2xl font-bold text-green-600">{formatCurrency(total)}</p>
           </div>
           <div className="space-y-3">
             <button
@@ -346,13 +347,13 @@ const NewSale: React.FC = () => {
                 setSaleCompleted(false)
                 setLastSaleId('')
               }}
-              className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+              className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors font-medium"
             >
               Nueva Venta
             </button>
             <button
               onClick={() => window.print()}
-              className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-colors"
+              className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-colors font-medium"
             >
               Imprimir Recibo
             </button>
@@ -363,35 +364,48 @@ const NewSale: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold text-gray-900">Punto de Venta</h1>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Sistema Online</span>
+      <div className="bg-white shadow-sm border-b border-gray-200 p-3 lg:p-4 flex-shrink-0">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <h1 className="text-lg lg:text-xl font-bold text-gray-900">Punto de Venta</h1>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 lg:w-3 lg:h-3 bg-green-500 rounded-full"></div>
+                <span className="text-xs lg:text-sm text-gray-600">Online</span>
+              </div>
+            </div>
+            
+            {/* Mobile Cart Summary */}
+            <div className="lg:hidden bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+              <div className="flex items-center space-x-2">
+                <ShoppingCart className="h-4 w-4 text-blue-600" />
+                <div className="text-xs">
+                  <p className="font-medium text-blue-900">{getTotalItems()}</p>
+                  <p className="font-bold text-blue-900">{formatCurrency(total)}</p>
+                </div>
+              </div>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* Quick Actions */}
             <div className="flex space-x-2">
               {quickActions.map((action) => (
                 <button
                   key={action.id}
                   onClick={action.action}
-                  className={`${action.color} text-white px-3 py-2 rounded-lg transition-colors flex items-center space-x-2`}
+                  className={`${action.color} text-white px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm`}
                 >
                   {action.icon}
-                  <span className="text-sm">{action.name}</span>
+                  <span className="hidden sm:inline">{action.name}</span>
                 </button>
               ))}
             </div>
             
-            {/* Cart Summary */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+            {/* Desktop Cart Summary */}
+            <div className="hidden lg:block bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
               <div className="flex items-center space-x-3">
                 <ShoppingCart className="h-5 w-5 text-blue-600" />
                 <div>
@@ -406,31 +420,31 @@ const NewSale: React.FC = () => {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Products or Cart */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* View Toggle */}
-          <div className="bg-white border-b border-gray-200 p-4">
+          <div className="bg-white border-b border-gray-200 p-3 lg:p-4 flex-shrink-0">
             <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setCurrentView('products')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-3 lg:px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center ${
                   currentView === 'products'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                <Package className="h-4 w-4 inline mr-2" />
-                Productos
+                <Package className="h-4 w-4 mr-2" />
+                <span>Productos</span>
               </button>
               <button
                 onClick={() => setCurrentView('cart')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-3 lg:px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center ${
                   currentView === 'cart'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                <ShoppingCart className="h-4 w-4 inline mr-2" />
-                Carrito ({getTotalItems()})
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                <span>Carrito ({getTotalItems()})</span>
               </button>
             </div>
           </div>
@@ -439,22 +453,48 @@ const NewSale: React.FC = () => {
           <div className="flex-1 overflow-hidden">
             {currentView === 'products' ? (
               <div className="h-full flex flex-col">
-                {/* Search */}
-                <div className="p-4 bg-white border-b border-gray-200">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar productos por nombre, SKU o categoría..."
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                {/* Search and View Toggle */}
+                <div className="p-3 lg:p-4 bg-white border-b border-gray-200 flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Buscar productos..."
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    
+                    {/* View Mode Toggle */}
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setProductsViewMode('grid')}
+                        className={`p-2 rounded-md transition-colors ${
+                          productsViewMode === 'grid'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setProductsViewMode('list')}
+                        className={`p-2 rounded-md transition-colors ${
+                          productsViewMode === 'list'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <List className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Products Grid */}
-                <div className="flex-1 overflow-y-auto p-4">
+                {/* Products Display */}
+                <div className="flex-1 overflow-y-auto p-3 lg:p-4">
                   {filteredProducts.length === 0 ? (
                     <div className="text-center py-12">
                       <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -462,8 +502,8 @@ const NewSale: React.FC = () => {
                         {searchTerm ? 'No se encontraron productos' : 'No hay productos disponibles'}
                       </p>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  ) : productsViewMode === 'grid' ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 lg:gap-4">
                       {filteredProducts.map((product) => {
                         const stock = product.inventory?.[0]?.quantity || 0
                         const inCart = cart.find(item => item.product.id === product.id)?.quantity || 0
@@ -472,11 +512,11 @@ const NewSale: React.FC = () => {
                         return (
                           <div
                             key={product.id}
-                            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer group"
+                            className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4 hover:shadow-md transition-all cursor-pointer group"
                             onClick={() => addToCart(product)}
                           >
                             {/* Product Image */}
-                            <div className="w-full h-24 mb-3 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                            <div className="w-full h-20 lg:h-24 mb-3 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                               {product.image_url ? (
                                 <img 
                                   src={product.image_url} 
@@ -484,7 +524,7 @@ const NewSale: React.FC = () => {
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
-                                <Package className="h-8 w-8 text-gray-400" />
+                                <Package className="h-6 w-6 lg:h-8 lg:w-8 text-gray-400" />
                               )}
                             </div>
                             
@@ -494,11 +534,11 @@ const NewSale: React.FC = () => {
                               </h4>
                               
                               <div className="flex items-center justify-between">
-                                <p className="font-bold text-blue-600">{formatCurrency(product.price)}</p>
+                                <p className="font-bold text-blue-600 text-sm lg:text-base">{formatCurrency(product.price)}</p>
                                 <span className={`text-xs px-2 py-1 rounded-full ${
                                   stock <= 5 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                                 }`}>
-                                  {stock} {product.unit_of_measure?.abbreviation || 'und'}
+                                  {stock}
                                 </span>
                               </div>
                               
@@ -521,20 +561,80 @@ const NewSale: React.FC = () => {
                         )
                       })}
                     </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredProducts.map((product) => {
+                        const stock = product.inventory?.[0]?.quantity || 0
+                        const inCart = cart.find(item => item.product.id === product.id)?.quantity || 0
+                        const availableStock = stock - inCart
+                        
+                        return (
+                          <div
+                            key={product.id}
+                            className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4 hover:shadow-md transition-all cursor-pointer group"
+                            onClick={() => addToCart(product)}
+                          >
+                            <div className="flex items-center space-x-4">
+                              {/* Product Image */}
+                              <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                {product.image_url ? (
+                                  <img 
+                                    src={product.image_url} 
+                                    alt={product.image_alt || product.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package className="h-6 w-6 text-gray-400" />
+                                )}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                                  {product.name}
+                                </h4>
+                                <p className="text-sm text-gray-500 truncate">
+                                  {product.category?.name || 'Sin categoría'}
+                                </p>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  <span className="font-bold text-blue-600">{formatCurrency(product.price)}</span>
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    stock <= 5 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    Stock: {stock}
+                                  </span>
+                                  {inCart > 0 && (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                                      {inCart} en carrito
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <button
+                                disabled={availableStock <= 0}
+                                className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex-shrink-0"
+                              >
+                                {availableStock <= 0 ? 'Sin stock' : 'Agregar'}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
             ) : (
               <div className="h-full flex flex-col">
                 {/* Cart Items */}
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-3 lg:p-4">
                   {cart.length === 0 ? (
                     <div className="text-center py-12">
                       <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">El carrito está vacío</p>
+                      <p className="text-gray-500 mb-4">El carrito está vacío</p>
                       <button
                         onClick={() => setCurrentView('products')}
-                        className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
                       >
                         Ver Productos
                       </button>
@@ -542,10 +642,10 @@ const NewSale: React.FC = () => {
                   ) : (
                     <div className="space-y-3">
                       {cart.map((item) => (
-                        <div key={item.product.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center space-x-4">
+                        <div key={item.product.id} className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4">
+                          <div className="flex items-center space-x-3 lg:space-x-4">
                             {/* Product Image */}
-                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
                               {item.product.image_url ? (
                                 <img 
                                   src={item.product.image_url} 
@@ -553,42 +653,42 @@ const NewSale: React.FC = () => {
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
-                                <Package className="h-6 w-6 text-gray-400" />
+                                <Package className="h-5 w-5 lg:h-6 lg:w-6 text-gray-400" />
                               )}
                             </div>
                             
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">{item.product.name}</h4>
-                              <p className="text-sm text-gray-500">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 truncate">{item.product.name}</h4>
+                              <p className="text-sm text-gray-500 truncate">
                                 {formatCurrency(item.product.price)}/{item.product.unit_of_measure?.abbreviation || 'und'}
                               </p>
                             </div>
                             
                             {/* Quantity Controls */}
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-2 lg:space-x-3">
                               <button
                                 onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                                 className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                               >
-                                <Minus size={16} />
+                                <Minus size={14} />
                               </button>
-                              <span className="w-12 text-center font-medium">{item.quantity}</span>
+                              <span className="w-8 lg:w-12 text-center font-medium text-sm lg:text-base">{item.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                                 className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                               >
-                                <Plus size={16} />
+                                <Plus size={14} />
                               </button>
                               <button
                                 onClick={() => removeFromCart(item.product.id)}
                                 className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors ml-2"
                               >
-                                <X size={16} />
+                                <X size={14} />
                               </button>
                             </div>
                             
-                            <div className="text-right">
-                              <p className="font-bold text-lg">{formatCurrency(item.total)}</p>
+                            <div className="text-right flex-shrink-0">
+                              <p className="font-bold text-base lg:text-lg">{formatCurrency(item.total)}</p>
                             </div>
                           </div>
                         </div>
@@ -601,8 +701,8 @@ const NewSale: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Panel - Checkout */}
-        <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+        {/* Right Panel - Checkout (Desktop) */}
+        <div className="hidden lg:flex w-80 xl:w-96 bg-white border-l border-gray-200 flex-col">
           {/* Customer Selection */}
           <div className="p-4 border-b border-gray-200">
             <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
@@ -802,6 +902,76 @@ const NewSale: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile Checkout Panel */}
+      <div className="lg:hidden bg-white border-t border-gray-200 p-4">
+        {cart.length > 0 && (
+          <div className="space-y-4">
+            {/* Quick Totals */}
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Total:</span>
+              <span className="text-xl font-bold text-green-600">{formatCurrency(total)}</span>
+            </div>
+            
+            {/* Payment Method Selection */}
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => setPaymentMethod('cash')}
+                className={`p-2 rounded-lg border-2 transition-colors text-xs ${
+                  paymentMethod === 'cash'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <DollarSign className="h-4 w-4 mx-auto mb-1" />
+                <span>Efectivo</span>
+              </button>
+              <button
+                onClick={() => setPaymentMethod('card')}
+                className={`p-2 rounded-lg border-2 transition-colors text-xs ${
+                  paymentMethod === 'card'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <CreditCard className="h-4 w-4 mx-auto mb-1" />
+                <span>Tarjeta</span>
+              </button>
+              <button
+                onClick={() => setPaymentMethod('transfer')}
+                className={`p-2 rounded-lg border-2 transition-colors text-xs ${
+                  paymentMethod === 'transfer'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <Scan className="h-4 w-4 mx-auto mb-1" />
+                <span>Transfer</span>
+              </button>
+            </div>
+            
+            {/* Checkout Button */}
+            <button
+              onClick={() => {
+                if (paymentMethod === 'cash') {
+                  setShowPaymentModal(true)
+                } else {
+                  processSale()
+                }
+              }}
+              disabled={loading}
+              className="w-full bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center font-semibold"
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+              ) : (
+                <Receipt size={20} className="mr-2" />
+              )}
+              {loading ? 'Procesando...' : 'Procesar Venta'}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Payment Modal for Cash */}
       {showPaymentModal && paymentMethod === 'cash' && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -814,7 +984,7 @@ const NewSale: React.FC = () => {
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Total a Pagar</p>
-                  <p className="text-3xl font-bold text-gray-900">{formatCurrency(total)}</p>
+                  <p className="text-2xl lg:text-3xl font-bold text-gray-900">{formatCurrency(total)}</p>
                 </div>
               </div>
               
@@ -838,7 +1008,7 @@ const NewSale: React.FC = () => {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="text-center">
                     <p className="text-sm text-green-600">Cambio</p>
-                    <p className="text-2xl font-bold text-green-700">{formatCurrency(getChange())}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-green-700">{formatCurrency(getChange())}</p>
                   </div>
                 </div>
               )}
