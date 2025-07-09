@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { Settings as SettingsIcon, Save, RefreshCw, Database, Shield, Bell, Palette, Globe, Lock } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const Settings: React.FC = () => {
   const [loading, setLoading] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [error, setError] = useState('')
   const [settings, setSettings] = useState({
     companyName: 'VentasPro',
     companyAddress: '',
@@ -17,15 +20,43 @@ const Settings: React.FC = () => {
     theme: 'light'
   })
 
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      // Cargar configuraciones desde localStorage o base de datos
+      const savedSettings = localStorage.getItem('ventaspro_settings')
+      if (savedSettings) {
+        setSettings(JSON.parse(savedSettings))
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error)
+    }
+  }
   const handleSave = async () => {
     setLoading(true)
+    setError('')
+    setSaveSuccess(false)
+    
     try {
-      // Simulate saving settings
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      alert('Configuración guardada exitosamente')
+      // Guardar en localStorage
+      localStorage.setItem('ventaspro_settings', JSON.stringify(settings))
+      
+      // Simular guardado en base de datos
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      
+      setSaveSuccess(true)
+      
+      // Ocultar mensaje de éxito después de 3 segundos
+      setTimeout(() => {
+        setSaveSuccess(false)
+      }, 3000)
+      
     } catch (error) {
       console.error('Error saving settings:', error)
-      alert('Error al guardar la configuración')
+      setError('Error al guardar la configuración. Intente nuevamente.')
     } finally {
       setLoading(false)
     }
@@ -46,6 +77,8 @@ const Settings: React.FC = () => {
         autoBackup: true,
         theme: 'light'
       })
+      setError('')
+      setSaveSuccess(false)
     }
   }
 
@@ -60,6 +93,7 @@ const Settings: React.FC = () => {
         <div className="flex space-x-3">
           <button
             onClick={handleReset}
+            disabled={loading}
             className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center"
           >
             <RefreshCw size={20} className="mr-2" />
@@ -75,11 +109,43 @@ const Settings: React.FC = () => {
             ) : (
               <Save size={20} className="mr-2" />
             )}
-            Guardar Cambios
+            {loading ? 'Guardando...' : 'Guardar Cambios'}
           </button>
         </div>
       </div>
 
+      {/* Success/Error Messages */}
+      {saveSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Save className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-green-800">
+                ¡Configuración guardada exitosamente!
+              </p>
+              <p className="text-sm text-green-700 mt-1">
+                Todos los cambios han sido aplicados correctamente.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Shield className="h-5 w-5 text-red-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-800">Error al guardar</p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Company Information */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
