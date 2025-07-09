@@ -36,7 +36,7 @@ const Employees: React.FC = () => {
           .select('role')
           .eq('user_id', user.id)
           .eq('status', 'active')
-          .single()
+          .maybeSingle()
         
         if (data) {
           setCurrentUserRole(data.role)

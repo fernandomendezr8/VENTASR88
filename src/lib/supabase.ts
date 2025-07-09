@@ -229,7 +229,7 @@ export const getCurrentEmployee = async (): Promise<Employee | null> => {
       .select('*')
       .eq('user_id', user.id)
       .eq('status', 'active')
-      .single()
+      .maybeSingle()
     
     if (error) {
       console.error('Error getting current employee:', error)
