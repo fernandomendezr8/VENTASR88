@@ -104,3 +104,141 @@ export interface CashRegister {
   reference_id: string
   created_at: string
 }
+
+export interface Employee {
+  id: string
+  user_id: string
+  name: string
+  email: string
+  role: 'admin' | 'manager' | 'cashier' | 'viewer'
+  permissions: Record<string, any>
+  status: 'active' | 'inactive' | 'suspended'
+  hire_date: string
+  phone?: string
+  address?: string
+  salary?: number
+  created_at: string
+  updated_at: string
+  created_by?: string
+}
+
+export interface UserPermissions {
+  sales: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  products: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  inventory: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  customers: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  suppliers: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  categories: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  employees: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  reports: {
+    read: boolean
+  }
+  cash_register: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  settings: {
+    read: boolean
+    update: boolean
+  }
+}
+
+// Función para obtener los permisos del usuario actual
+export const getCurrentUserPermissions = async (): Promise<UserPermissions | null> => {
+  try {
+    const { data, error } = await supabase.rpc('get_current_user_permissions')
+    
+    if (error) {
+      console.error('Error getting user permissions:', error)
+      return null
+    }
+    
+    return data as UserPermissions
+  } catch (error) {
+    console.error('Error getting user permissions:', error)
+    return null
+  }
+}
+
+// Función para verificar un permiso específico
+export const checkPermission = async (module: string, action: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.rpc('check_permission', {
+      module_name: module,
+      action_name: action
+    })
+    
+    if (error) {
+      console.error('Error checking permission:', error)
+      return false
+    }
+    
+    return data as boolean
+  } catch (error) {
+    console.error('Error checking permission:', error)
+    return false
+  }
+}
+
+// Función para obtener el empleado actual
+export const getCurrentEmployee = async (): Promise<Employee | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) return null
+    
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single()
+    
+    if (error) {
+      console.error('Error getting current employee:', error)
+      return null
+    }
+    
+    return data as Employee
+  } catch (error) {
+    console.error('Error getting current employee:', error)
+    return null
+  }
+}

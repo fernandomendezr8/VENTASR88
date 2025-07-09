@@ -37,12 +37,45 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           return
         }
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password
         })
         
         if (error) throw error
+        
+        // Si el registro fue exitoso y hay un usuario, crear el empleado
+        if (data.user) {
+          // Verificar si es el primer usuario (será admin)
+          const { count } = await supabase
+            .from('employees')
+            .select('*', { count: 'exact', head: true })
+          
+          const isFirstUser = count === 0 || count === 1 // Considerando el registro placeholder
+          
+          // Crear empleado
+          await supabase
+            .from('employees')
+            .insert({
+              user_id: data.user.id,
+              name: formData.email.split('@')[0], // Usar parte del email como nombre temporal
+              email: formData.email,
+              role: isFirstUser ? 'admin' : 'cashier',
+              status: 'active'
+            })
+          
+          // Si es el primer usuario, actualizar el registro placeholder
+          if (isFirstUser) {
+            await supabase
+              .from('employees')
+              .update({
+                user_id: data.user.id,
+                name: formData.email.split('@')[0],
+                email: formData.email
+              })
+              .is('user_id', null)
+          }
+        }
         
         setError('')
         setIsLogin(true)

@@ -17,7 +17,8 @@ import {
   LogOut,
   User,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Shield
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
@@ -81,6 +82,14 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
       items: [
         { id: 'customers', label: 'Clientes', icon: UserCheck, description: 'Base de clientes' },
         { id: 'suppliers', label: 'Proveedores', icon: Building2, description: 'Gestión de proveedores' }
+      ]
+    },
+    {
+      id: 'administracion',
+      title: 'Administración',
+      icon: Shield,
+      items: [
+        { id: 'employees', label: 'Empleados', icon: Users, description: 'Gestión de empleados' }
       ]
     },
     {

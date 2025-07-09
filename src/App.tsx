@@ -13,6 +13,7 @@ import Categories from './components/Categories'
 import Reports from './components/Reports'
 import Inventory from './components/Inventory'
 import CashRegister from './components/CashRegister'
+import Employees from './components/Employees'
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -41,6 +42,8 @@ function App() {
         return <CashRegister />
       case 'reports':
         return <Reports />
+      case 'employees':
+        return <Employees />
       default:
         return <Dashboard />
     }
