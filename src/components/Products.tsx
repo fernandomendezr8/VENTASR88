@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Plus, Search, Edit2, Trash2, Package, Upload, X, Image as ImageIcon } from 'lucide-react'
 import { supabase, Product, Category, Supplier, UnitOfMeasure } from '../lib/supabase'
 import { compressImage, validateImageFile, createPlaceholderImage } from '../utils/imageUtils'
@@ -34,14 +34,7 @@ const Products: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string>('')
   const [imageLoading, setImageLoading] = useState(false)
 
-  useEffect(() => {
-    fetchProducts()
-    fetchCategories()
-    fetchSuppliers()
-    fetchUnitsOfMeasure()
-  }, [])
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     const { data } = await supabase
       .from('products')
       .select(`
@@ -54,27 +47,27 @@ const Products: React.FC = () => {
       .order('name')
     
     setProducts(data || [])
-  }
+  }, [])
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     const { data } = await supabase
       .from('categories')
       .select('*')
       .order('name')
     
     setCategories(data || [])
-  }
+  }, [])
 
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = useCallback(async () => {
     const { data } = await supabase
       .from('suppliers')
       .select('*')
       .order('name')
     
     setSuppliers(data || [])
-  }
+  }, [])
 
-  const fetchUnitsOfMeasure = async () => {
+  const fetchUnitsOfMeasure = useCallback(async () => {
     const { data } = await supabase
       .from('units_of_measure')
       .select('*')
@@ -82,7 +75,17 @@ const Products: React.FC = () => {
       .order('name', { ascending: true })
     
     setUnitsOfMeasure(data || [])
-  }
+  }, [])
+
+  useEffect(() => {
+    // Cargar datos en paralelo para mejor rendimiento
+    Promise.all([
+      fetchProducts(),
+      fetchCategories(),
+      fetchSuppliers(),
+      fetchUnitsOfMeasure()
+    ])
+  }, [fetchProducts, fetchCategories, fetchSuppliers, fetchUnitsOfMeasure])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -230,7 +233,7 @@ const Products: React.FC = () => {
     }
   }
 
-  const filteredProducts = products.filter(product =>
+  const filteredProducts = useMemo(() => products.filter(product =>
     (product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
      product.description?.toLowerCase().includes(searchTerm.toLowerCase())) &&
@@ -239,30 +242,30 @@ const Products: React.FC = () => {
     (statusFilter === 'all' || 
      (statusFilter === 'active' && product.is_active) ||
      (statusFilter === 'inactive' && !product.is_active))
-  )
+  ), [products, searchTerm, categoryFilter, supplierFilter, statusFilter])
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = useMemo(() => (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
       currency: 'COP'
     }).format(amount)
-  }
+  }, [])
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useMemo(() => (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     })
-  }
+  }, [])
 
-  const groupedUnits = unitsOfMeasure.reduce((acc, unit) => {
+  const groupedUnits = useMemo(() => unitsOfMeasure.reduce((acc, unit) => {
     if (!acc[unit.category]) {
       acc[unit.category] = []
     }
     acc[unit.category].push(unit)
     return acc
-  }, {} as Record<string, UnitOfMeasure[]>)
+  }, {} as Record<string, UnitOfMeasure[]>), [unitsOfMeasure])
 
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { TrendingUp, DollarSign, Package, Users, AlertTriangle, ShoppingCart, Calendar, TrendingDown, BarChart3, PieChart, Activity } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -42,70 +42,35 @@ const Dashboard: React.FC = () => {
   const [recentSales, setRecentSales] = useState<RecentSale[]>([])
   const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([])
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    if (loading) return // Evitar múltiples llamadas simultáneas
+    
+    setLoading(true)
     try {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
 
-      // Fetch sales data
-      const { data: salesData } = await supabase
-        .from('sales')
-        .select('total_amount, created_at, status')
+      // Ejecutar consultas en paralelo para mejor rendimiento
+      const [
+        { data: salesData },
+        { data: recentSalesData },
+        { count: productsCount },
+        { count: customersCount },
+        { count: categoriesCount },
+        { count: suppliersCount },
+        { data: inventoryData }
+      ] = await Promise.all([
+        supabase.from('sales').select('total_amount, created_at, status'),
+        supabase.from('sales').select('id, total_amount, created_at, customer:customers(name)').order('created_at', { ascending: false }).limit(5),
+        supabase.from('products').select('*', { count: 'exact', head: true }),
+        supabase.from('customers').select('*', { count: 'exact', head: true }),
+        supabase.from('categories').select('*', { count: 'exact', head: true }),
+        supabase.from('suppliers').select('*', { count: 'exact', head: true }),
+        supabase.from('inventory').select('quantity, min_stock, product:products(id, name)')
+      ])
 
-      // Fetch recent sales with customer info
-      const { data: recentSalesData } = await supabase
-        .from('sales')
-        .select(`
-          id,
-          total_amount,
-          created_at,
-          customer:customers(name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5)
-
-      // Fetch products count
-      const { count: productsCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-
-      // Fetch customers count
-      const { count: customersCount } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true })
-
-      // Fetch categories count
-      const { count: categoriesCount } = await supabase
-        .from('categories')
-        .select('*', { count: 'exact', head: true })
-
-      // Fetch suppliers count
-      const { count: suppliersCount } = await supabase
-        .from('suppliers')
-        .select('*', { count: 'exact', head: true })
-
-      // Fetch low stock items
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from('inventory')
-        .select(`
-          quantity,
-          min_stock,
-          product:products(id, name)
-        `)
-
-      if (inventoryError) {
-        console.error('Error fetching inventory:', inventoryError)
-      }
-
-      // Process low stock items
-      const lowStockItems = inventoryData 
-        ? inventoryData.filter(item => item.quantity < item.min_stock)
-        : []
-
+      // Procesar datos de forma más eficiente
+      const lowStockItems = inventoryData?.filter(item => item.quantity < item.min_stock) || []
       const lowStockProducts = lowStockItems.map(item => ({
         id: item.product?.id || '',
         name: item.product?.name || '',
@@ -139,16 +104,20 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [loading])
 
-  const formatCurrency = (amount: number) => {
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
+
+  const formatCurrency = useMemo(() => (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
       currency: 'COP'
     }).format(amount)
-  }
+  }, [])
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useMemo(() => (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
@@ -156,12 +125,12 @@ const Dashboard: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     })
-  }
+  }, [])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     )
   }

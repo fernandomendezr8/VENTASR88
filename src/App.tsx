@@ -1,27 +1,36 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import Layout from './components/Layout'
 import Auth from './components/Auth'
 import { supabase } from './lib/supabase'
 import type { User } from '@supabase/supabase-js'
-import Dashboard from './components/Dashboard'
-import NewSale from './components/NewSale'
-import Sales from './components/Sales'
-import Products from './components/Products'
-import Customers from './components/Customers'
-import Suppliers from './components/Suppliers'
-import Categories from './components/Categories'
-import Reports from './components/Reports'
-import Inventory from './components/Inventory'
-import CashRegister from './components/CashRegister'
-import Employees from './components/Employees'
-import Settings from './components/Settings'
+
+// Lazy loading de componentes para mejorar rendimiento
+const Dashboard = lazy(() => import('./components/Dashboard'))
+const NewSale = lazy(() => import('./components/NewSale'))
+const Sales = lazy(() => import('./components/Sales'))
+const Products = lazy(() => import('./components/Products'))
+const Customers = lazy(() => import('./components/Customers'))
+const Suppliers = lazy(() => import('./components/Suppliers'))
+const Categories = lazy(() => import('./components/Categories'))
+const Reports = lazy(() => import('./components/Reports'))
+const Inventory = lazy(() => import('./components/Inventory'))
+const CashRegister = lazy(() => import('./components/CashRegister'))
+const Employees = lazy(() => import('./components/Employees'))
+const Settings = lazy(() => import('./components/Settings'))
+
+// Componente de loading optimizado
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+  </div>
+)
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState('dashboard')
 
-  const renderPage = () => {
+  const renderPage = React.useMemo(() => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />
@@ -50,7 +59,7 @@ function App() {
       default:
         return <Dashboard />
     }
-  }
+  }, [currentPage])
 
   useEffect(() => {
     // Get initial session
@@ -58,9 +67,8 @@ function App() {
       setUser(session?.user ?? null)
       setLoading(false)
     })
-    .catch((error) => {
+    .catch(() => {
       // Handle authentication errors by clearing session and forcing re-authentication
-      console.warn('Authentication error during session retrieval:', error)
       supabase.auth.signOut()
       setUser(null)
       setLoading(false)
@@ -78,36 +86,18 @@ function App() {
       }
     })
 
-    // Handle global auth errors
-    const handleAuthError = (error: any) => {
-      console.warn('Global auth error:', error)
-      if (error.message && (
-        error.message.includes('Invalid Refresh Token') ||
-        error.message.includes('refresh_token_not_found') ||
-        error.message.includes('JWT expired')
-      )) {
-        supabase.auth.signOut()
-        setUser(null)
-      }
-    }
-
-    // Listen for auth errors
-    const errorSubscription = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
-    })
-
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleAuthSuccess = () => {
-    // The auth state change listener will handle setting the user
-  }
+  const handleAuthSuccess = React.useCallback(() => {
+    // Auth state change listener handles setting the user
+  }, [])
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando sistema...</p>
         </div>
       </div>
@@ -125,7 +115,9 @@ function App() {
       user={user}
       onLogout={() => supabase.auth.signOut()}
     >
-      {renderPage()}
+      <Suspense fallback={<LoadingSpinner />}>
+        {renderPage}
+      </Suspense>
     </Layout>
   )
 }

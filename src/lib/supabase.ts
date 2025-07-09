@@ -21,10 +21,24 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing required Supabase environment variables')
 }
 
-console.log('Supabase URL:', supabaseUrl)
-console.log('Supabase Key exists:', !!supabaseAnonKey)
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+// Configuración optimizada para mejor rendimiento
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  },
+  global: {
+    headers: {
+      'x-client-info': 'ventaspro-v1.0'
+    }
+  }
+})
 
 // Types for our database tables
 export interface Category {

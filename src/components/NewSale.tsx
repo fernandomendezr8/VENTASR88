@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Plus, Minus, Search, ShoppingCart, User, Package, Calculator, X, Receipt } from 'lucide-react'
 import { supabase, Product, Customer, Sale } from '../lib/supabase'
 
@@ -30,12 +30,7 @@ const NewSale: React.FC = () => {
     address: ''
   })
 
-  useEffect(() => {
-    fetchProducts()
-    fetchCustomers()
-  }, [])
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const { data } = await supabase
         .from('products')
@@ -53,9 +48,9 @@ const NewSale: React.FC = () => {
     } catch (error) {
       console.error('Error fetching products:', error)
     }
-  }
+  }, [])
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       const { data } = await supabase
         .from('customers')
@@ -66,9 +61,13 @@ const NewSale: React.FC = () => {
     } catch (error) {
       console.error('Error fetching customers:', error)
     }
-  }
+  }, [])
 
-  const addToCart = (product: Product) => {
+  useEffect(() => {
+    Promise.all([fetchProducts(), fetchCustomers()])
+  }, [fetchProducts, fetchCustomers])
+
+  const addToCart = useCallback((product: Product) => {
     const existingItem = cart.find(item => item.product.id === product.id)
     
     if (existingItem) {
@@ -82,9 +81,9 @@ const NewSale: React.FC = () => {
       }
       setCart([...cart, newItem])
     }
-  }
+  }, [cart])
 
-  const updateQuantity = (productId: string, newQuantity: number) => {
+  const updateQuantity = useCallback((productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeFromCart(productId)
       return
@@ -95,25 +94,25 @@ const NewSale: React.FC = () => {
         ? { ...item, quantity: newQuantity, totalPrice: item.unitPrice * newQuantity }
         : item
     ))
-  }
+  }, [cart])
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = useCallback((productId: string) => {
     setCart(cart.filter(item => item.product.id !== productId))
-  }
+  }, [cart])
 
-  const calculateSubtotal = () => {
+  const calculateSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.totalPrice, 0)
-  }
+  }, [cart])
 
-  const calculateTax = () => {
-    return calculateSubtotal() * 0.19 // 19% IVA
-  }
+  const calculateTax = useMemo(() => {
+    return calculateSubtotal * 0.19 // 19% IVA
+  }, [calculateSubtotal])
 
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax() - discount
-  }
+  const calculateTotal = useMemo(() => {
+    return calculateSubtotal + calculateTax - discount
+  }, [calculateSubtotal, calculateTax, discount])
 
-  const handleCreateCustomer = async (e: React.FormEvent) => {
+  const handleCreateCustomer = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     
     try {
@@ -133,9 +132,9 @@ const NewSale: React.FC = () => {
       console.error('Error creating customer:', error)
       alert('Error al crear el cliente')
     }
-  }
+  }, [newCustomer, fetchCustomers])
 
-  const processSale = async () => {
+  const processSale = useCallback(async () => {
     if (cart.length === 0) {
       alert('El carrito está vacío')
       return
@@ -147,10 +146,10 @@ const NewSale: React.FC = () => {
       // Create sale
       const saleData = {
         customer_id: selectedCustomer?.id || null,
-        subtotal: calculateSubtotal(),
+        subtotal: calculateSubtotal,
         discount: discount,
-        tax: calculateTax(),
-        total_amount: calculateTotal(),
+        tax: calculateTax,
+        total_amount: calculateTotal,
         payment_method: paymentMethod,
         status: 'completed'
       }
@@ -194,7 +193,7 @@ const NewSale: React.FC = () => {
         .from('cash_register')
         .insert({
           type: 'sale',
-          amount: calculateTotal(),
+          amount: calculateTotal,
           description: `Venta #${sale.id.slice(-8)} - ${selectedCustomer?.name || 'Cliente general'}`,
           reference_id: sale.id
         })
@@ -218,7 +217,7 @@ const NewSale: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [cart, selectedCustomer, calculateSubtotal, calculateTax, calculateTotal, discount, paymentMethod, fetchProducts])
 
   const printReceipt = () => {
     if (!lastSale) return
@@ -276,17 +275,17 @@ const NewSale: React.FC = () => {
     receiptWindow.document.close()
   }
 
-  const filteredProducts = products.filter(product =>
+  const filteredProducts = useMemo(() => products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ), [products, searchTerm])
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = useMemo(() => (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
       currency: 'COP'
     }).format(amount)
-  }
+  }, [])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
