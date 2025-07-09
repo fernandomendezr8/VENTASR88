@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Eye, Calendar, DollarSign, ShoppingCart, User } from 'lucide-react'
+import { Search, Eye, Calendar, DollarSign, ShoppingCart, User, Receipt } from 'lucide-react'
 import { supabase, Sale, SaleItem } from '../lib/supabase'
 
 interface SaleWithDetails extends Sale {
@@ -50,6 +50,188 @@ const Sales: React.FC = () => {
   const viewSaleDetails = (sale: SaleWithDetails) => {
     setSelectedSale(sale)
     setShowModal(true)
+  }
+
+  const printSaleReceipt = (sale: SaleWithDetails) => {
+    const receiptWindow = window.open('', '_blank', 'width=300,height=600')
+    if (!receiptWindow) return
+
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'COP'
+      }).format(amount)
+    }
+
+    const getPaymentMethodText = (method: string) => {
+      switch (method) {
+        case 'cash': return 'Efectivo'
+        case 'card': return 'Tarjeta'
+        case 'transfer': return 'Transferencia'
+        default: return method
+      }
+    }
+
+    const receiptHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comprobante de Venta #${sale.id.slice(-8)}</title>
+        <style>
+          body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 10px;
+            width: 280px;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+          }
+          .company-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .receipt-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 10px 0;
+          }
+          .info-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+          }
+          .items-header {
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+            padding: 5px 0;
+            margin: 10px 0;
+            font-weight: bold;
+          }
+          .item-line {
+            margin: 3px 0;
+          }
+          .totals {
+            border-top: 2px solid #000;
+            padding-top: 10px;
+            margin-top: 10px;
+          }
+          .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+          }
+          .final-total {
+            font-weight: bold;
+            font-size: 14px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            margin-top: 5px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+            font-size: 10px;
+          }
+          @media print {
+            body { margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company-name">VENTASPRO</div>
+          <div>Sistema de Gestión</div>
+        </div>
+        
+        <div class="receipt-title">COMPROBANTE DE VENTA</div>
+        
+        <div class="info-line">
+          <span>Venta #:</span>
+          <span>${sale.id.slice(-8)}</span>
+        </div>
+        <div class="info-line">
+          <span>Fecha:</span>
+          <span>${formatDate(sale.created_at)}</span>
+        </div>
+        <div class="info-line">
+          <span>Cliente:</span>
+          <span>${sale.customer?.name || 'Cliente general'}</span>
+        </div>
+        ${sale.customer?.cedula ? `
+        <div class="info-line">
+          <span>Cédula:</span>
+          <span>${sale.customer.cedula}</span>
+        </div>
+        ` : ''}
+        <div class="info-line">
+          <span>Método:</span>
+          <span>${getPaymentMethodText(sale.payment_method)}</span>
+        </div>
+        <div class="info-line">
+          <span>Estado:</span>
+          <span>${sale.status === 'completed' ? 'Completada' : sale.status}</span>
+        </div>
+        
+        <div class="items-header">
+          PRODUCTOS
+        </div>
+        
+        ${sale.sale_items?.map(item => `
+          <div class="item-line">
+            <div>${item.product?.name || 'Producto'}</div>
+            <div class="info-line">
+              <span>${item.quantity} x ${formatCurrency(item.unit_price)}</span>
+              <span>${formatCurrency(item.total_price)}</span>
+            </div>
+          </div>
+        `).join('') || ''}
+        
+        <div class="totals">
+          <div class="total-line">
+            <span>Subtotal:</span>
+            <span>${formatCurrency(sale.subtotal)}</span>
+          </div>
+          ${sale.discount > 0 ? `
+          <div class="total-line">
+            <span>Descuento:</span>
+            <span>-${formatCurrency(sale.discount)}</span>
+          </div>
+          ` : ''}
+          <div class="total-line">
+            <span>IVA:</span>
+            <span>${formatCurrency(sale.tax)}</span>
+          </div>
+          <div class="total-line final-total">
+            <span>TOTAL:</span>
+            <span>${formatCurrency(sale.total_amount)}</span>
+          </div>
+        </div>
+        
+        <div class="footer">
+          ¡Gracias por su compra!<br>
+          Conserve este comprobante
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `
+
+    receiptWindow.document.write(receiptHTML)
+    receiptWindow.document.close()
   }
 
   const filteredSales = sales.filter(sale => {
@@ -351,12 +533,22 @@ const Sales: React.FC = () => {
                       {formatDate(sale.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => viewSaleDetails(sale)}
-                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-                      >
-                        <Eye size={16} />
-                      </button>
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => viewSaleDetails(sale)}
+                          className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+                          title="Ver detalles"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => printSaleReceipt(sale)}
+                          className="p-2 text-green-500 hover:bg-green-50 rounded-full transition-colors"
+                          title="Imprimir comprobante"
+                        >
+                          <Receipt size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -458,6 +650,17 @@ const Sales: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+          
+          {/* Print Button */}
+          <div className="p-6 border-t border-gray-200">
+            <button
+              onClick={() => printSaleReceipt(selectedSale)}
+              className="w-full bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center"
+            >
+              <Receipt className="h-5 w-5 mr-2" />
+              Imprimir Comprobante
+            </button>
           </div>
         </div>
       )}

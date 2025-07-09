@@ -38,6 +38,17 @@ const NewSale: React.FC = () => {
   const [cashReceived, setCashReceived] = useState('')
   const [saleCompleted, setSaleCompleted] = useState(false)
   const [lastSaleId, setLastSaleId] = useState('')
+  const [lastSaleData, setLastSaleData] = useState<{
+    id: string
+    total: number
+    customer?: string
+    items: CartItem[]
+    subtotal: number
+    discount: number
+    tax: number
+    paymentMethod: string
+    date: string
+  } | null>(null)
   const [productsViewMode, setProductsViewMode] = useState<'grid' | 'list'>('grid')
 
   useEffect(() => {
@@ -270,6 +281,17 @@ const NewSale: React.FC = () => {
 
       // Reset form and show success
       setLastSaleId(sale.id)
+      setLastSaleData({
+        id: sale.id,
+        total,
+        customer: selectedCustomer ? customers.find(c => c.id === selectedCustomer)?.name : 'Cliente general',
+        items: [...cart],
+        subtotal,
+        discount: discountAmount,
+        tax: taxAmount,
+        paymentMethod,
+        date: new Date().toISOString()
+      })
       setSaleCompleted(true)
       setShowPaymentModal(false)
       clearCart()
@@ -307,6 +329,172 @@ const NewSale: React.FC = () => {
     return received - total
   }
 
+  const printReceipt = (saleData?: typeof lastSaleData) => {
+    const dataToUse = saleData || lastSaleData
+    if (!dataToUse) return
+
+    const receiptWindow = window.open('', '_blank', 'width=300,height=600')
+    if (!receiptWindow) return
+
+    const receiptHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comprobante de Venta</title>
+        <style>
+          body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 10px;
+            width: 280px;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+          }
+          .company-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .receipt-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 10px 0;
+          }
+          .info-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+          }
+          .items-header {
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+            padding: 5px 0;
+            margin: 10px 0;
+            font-weight: bold;
+          }
+          .item-line {
+            margin: 3px 0;
+          }
+          .totals {
+            border-top: 2px solid #000;
+            padding-top: 10px;
+            margin-top: 10px;
+          }
+          .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+          }
+          .final-total {
+            font-weight: bold;
+            font-size: 14px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            margin-top: 5px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+            font-size: 10px;
+          }
+          @media print {
+            body { margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company-name">VENTASPRO</div>
+          <div>Sistema de Gestión</div>
+        </div>
+        
+        <div class="receipt-title">COMPROBANTE DE VENTA</div>
+        
+        <div class="info-line">
+          <span>Venta #:</span>
+          <span>${dataToUse.id.slice(-8)}</span>
+        </div>
+        <div class="info-line">
+          <span>Fecha:</span>
+          <span>${new Date(dataToUse.date).toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</span>
+        </div>
+        <div class="info-line">
+          <span>Cliente:</span>
+          <span>${dataToUse.customer}</span>
+        </div>
+        <div class="info-line">
+          <span>Método:</span>
+          <span>${dataToUse.paymentMethod === 'cash' ? 'Efectivo' : 
+                   dataToUse.paymentMethod === 'card' ? 'Tarjeta' : 'Transferencia'}</span>
+        </div>
+        
+        <div class="items-header">
+          PRODUCTOS
+        </div>
+        
+        ${dataToUse.items.map(item => `
+          <div class="item-line">
+            <div>${item.product.name}</div>
+            <div class="info-line">
+              <span>${item.quantity} x ${formatCurrency(item.product.price)}</span>
+              <span>${formatCurrency(item.total)}</span>
+            </div>
+          </div>
+        `).join('')}
+        
+        <div class="totals">
+          <div class="total-line">
+            <span>Subtotal:</span>
+            <span>${formatCurrency(dataToUse.subtotal)}</span>
+          </div>
+          ${dataToUse.discount > 0 ? `
+          <div class="total-line">
+            <span>Descuento:</span>
+            <span>-${formatCurrency(dataToUse.discount)}</span>
+          </div>
+          ` : ''}
+          <div class="total-line">
+            <span>IVA (19%):</span>
+            <span>${formatCurrency(dataToUse.tax)}</span>
+          </div>
+          <div class="total-line final-total">
+            <span>TOTAL:</span>
+            <span>${formatCurrency(dataToUse.total)}</span>
+          </div>
+        </div>
+        
+        <div class="footer">
+          ¡Gracias por su compra!<br>
+          Conserve este comprobante
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `
+
+    receiptWindow.document.write(receiptHTML)
+    receiptWindow.document.close()
+  }
+
   const quickActions: QuickAction[] = [
     {
       id: 'clear-cart',
@@ -339,20 +527,23 @@ const NewSale: React.FC = () => {
             <p className="text-sm text-gray-600">ID de Venta</p>
             <p className="text-lg font-mono font-bold text-gray-900">#{lastSaleId.slice(-8)}</p>
             <p className="text-sm text-gray-600 mt-2">Total</p>
-            <p className="text-xl lg:text-2xl font-bold text-green-600">{formatCurrency(total)}</p>
+            <p className="text-xl lg:text-2xl font-bold text-green-600">
+              {lastSaleData ? formatCurrency(lastSaleData.total) : formatCurrency(0)}
+            </p>
           </div>
           <div className="space-y-3">
             <button
               onClick={() => {
                 setSaleCompleted(false)
                 setLastSaleId('')
+                setLastSaleData(null)
               }}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors font-medium"
             >
               Nueva Venta
             </button>
             <button
-              onClick={() => window.print()}
+              onClick={() => printReceipt()}
               className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-colors font-medium"
             >
               Imprimir Recibo
