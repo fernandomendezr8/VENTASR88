@@ -59,17 +59,40 @@ function App() {
       setLoading(false)
     })
     .catch((error) => {
-      // Handle invalid refresh token errors
-      if (error.message && error.message.includes('Invalid Refresh Token')) {
-        // Clear invalid session data and force re-authentication
-        supabase.auth.signOut()
-        setUser(null)
-      }
+      // Handle authentication errors by clearing session and forcing re-authentication
+      console.warn('Authentication error during session retrieval:', error)
+      supabase.auth.signOut()
+      setUser(null)
       setLoading(false)
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Handle sign out events and token refresh failures
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        setUser(session?.user ?? null)
+      } else if (event === 'SIGNED_IN') {
+        setUser(session?.user ?? null)
+      } else {
+        setUser(session?.user ?? null)
+      }
+    })
+
+    // Handle global auth errors
+    const handleAuthError = (error: any) => {
+      console.warn('Global auth error:', error)
+      if (error.message && (
+        error.message.includes('Invalid Refresh Token') ||
+        error.message.includes('refresh_token_not_found') ||
+        error.message.includes('JWT expired')
+      )) {
+        supabase.auth.signOut()
+        setUser(null)
+      }
+    }
+
+    // Listen for auth errors
+    const errorSubscription = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
     })
 
