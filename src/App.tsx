@@ -14,6 +14,7 @@ import Reports from './components/Reports'
 import Inventory from './components/Inventory'
 import CashRegister from './components/CashRegister'
 import Employees from './components/Employees'
+import Settings from './components/Settings'
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -44,6 +45,8 @@ function App() {
         return <Reports />
       case 'employees':
         return <Employees />
+      case 'settings':
+        return <Settings />
       default:
         return <Dashboard />
     }
@@ -82,7 +85,7 @@ function App() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
+          <p className="text-gray-600">Cargando sistema...</p>
         </div>
       </div>
     )

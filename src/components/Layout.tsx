@@ -18,7 +18,9 @@ import {
   User,
   ChevronDown,
   ChevronRight,
-  Shield
+  Shield,
+  Settings,
+  Crown
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
@@ -36,6 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
     'ventas': true,
     'inventario': true,
     'contactos': false,
+    'administracion': false,
     'reportes': false
   })
 
@@ -52,17 +55,17 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
       title: 'Panel Principal',
       icon: LayoutDashboard,
       items: [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Resumen general' }
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Resumen general del negocio' }
       ]
     },
     {
       id: 'ventas',
-      title: 'Ventas',
+      title: 'Punto de Venta',
       icon: ShoppingCart,
       items: [
-        { id: 'new-sale', label: 'Nueva Venta', icon: ShoppingCart, description: 'Punto de venta' },
-        { id: 'sales', label: 'Historial', icon: FileText, description: 'Ver todas las ventas' },
-        { id: 'cash-register', label: 'Caja', icon: Calculator, description: 'Control de caja' }
+        { id: 'new-sale', label: 'Nueva Venta', icon: ShoppingCart, description: 'Realizar nueva venta' },
+        { id: 'sales', label: 'Historial de Ventas', icon: FileText, description: 'Ver todas las ventas' },
+        { id: 'cash-register', label: 'Caja Registradora', icon: Calculator, description: 'Control de caja y movimientos' }
       ]
     },
     {
@@ -71,8 +74,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
       icon: Package,
       items: [
         { id: 'products', label: 'Productos', icon: Package, description: 'Gestión de productos' },
-        { id: 'categories', label: 'Categorías', icon: Tags, description: 'Organizar productos' },
-        { id: 'inventory', label: 'Stock', icon: Archive, description: 'Control de inventario' }
+        { id: 'categories', label: 'Categorías', icon: Tags, description: 'Organizar productos por categorías' },
+        { id: 'inventory', label: 'Control de Stock', icon: Archive, description: 'Monitoreo de inventario' }
       ]
     },
     {
@@ -80,7 +83,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
       title: 'Contactos',
       icon: Users,
       items: [
-        { id: 'customers', label: 'Clientes', icon: UserCheck, description: 'Base de clientes' },
+        { id: 'customers', label: 'Clientes', icon: UserCheck, description: 'Base de datos de clientes' },
         { id: 'suppliers', label: 'Proveedores', icon: Building2, description: 'Gestión de proveedores' }
       ]
     },
@@ -89,7 +92,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
       title: 'Administración',
       icon: Shield,
       items: [
-        { id: 'employees', label: 'Empleados', icon: Users, description: 'Gestión de empleados' }
+        { id: 'employees', label: 'Empleados', icon: Users, description: 'Gestión de empleados y administradores' },
+        { id: 'settings', label: 'Configuración', icon: Settings, description: 'Configuración del sistema' }
       ]
     },
     {
@@ -97,7 +101,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
       title: 'Reportes',
       icon: TrendingUp,
       items: [
-        { id: 'reports', label: 'Reportes', icon: TrendingUp, description: 'Análisis y estadísticas' }
+        { id: 'reports', label: 'Análisis y Reportes', icon: TrendingUp, description: 'Estadísticas y análisis de ventas' }
       ]
     }
   ]
@@ -107,7 +111,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
       const item = section.items.find(item => item.id === currentPage)
       if (item) return item
     }
-    return { label: 'Dashboard', icon: LayoutDashboard }
+    return { label: 'Dashboard', icon: LayoutDashboard, description: 'Panel principal' }
   }
 
   const currentPageInfo = getCurrentPageInfo()
@@ -124,7 +128,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
             </div>
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-white truncate">VentasPro</h1>
-              <p className="text-xs text-blue-100 hidden sm:block">Sistema de Gestión</p>
+              <p className="text-xs text-blue-100 hidden sm:block">Sistema de Gestión Comercial</p>
             </div>
           </div>
           <button
@@ -324,7 +328,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
                     {currentPageInfo.label}
                   </h2>
                   <p className="text-xs lg:text-sm text-gray-500 truncate hidden sm:block">
-                    {getCurrentPageInfo().description || 'Gestión del sistema'}
+                    {currentPageInfo.description}
                   </p>
                 </div>
               </div>
