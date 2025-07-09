@@ -55,6 +55,15 @@ function App() {
       setUser(session?.user ?? null)
       setLoading(false)
     })
+    .catch((error) => {
+      // Handle invalid refresh token errors
+      if (error.message && error.message.includes('Invalid Refresh Token')) {
+        // Clear invalid session data and force re-authentication
+        supabase.auth.signOut()
+        setUser(null)
+      }
+      setLoading(false)
+    })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
