@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Users, Mail, Phone, MapPin, User, Shield, Eye, EyeOff, Calendar, DollarSign } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Users, Mail, Phone, MapPin, User, Shield, Eye, EyeOff, Calendar, DollarSign, UserPlus, Crown, Settings } from 'lucide-react'
 import { supabase, Employee } from '../lib/supabase'
 
 const Employees: React.FC = () => {
@@ -11,6 +11,7 @@ const Employees: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [loading, setLoading] = useState(false)
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
+  const [showInviteModal, setShowInviteModal] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -20,6 +21,14 @@ const Employees: React.FC = () => {
     address: '',
     salary: '',
     hire_date: new Date().toISOString().split('T')[0]
+  })
+
+  const [inviteData, setInviteData] = useState({
+    name: '',
+    email: '',
+    role: 'cashier' as 'admin' | 'manager' | 'cashier' | 'viewer',
+    phone: '',
+    temporaryPassword: ''
   })
 
   useEffect(() => {
@@ -57,6 +66,65 @@ const Employees: React.FC = () => {
       setEmployees(data || [])
     } catch (error) {
       console.error('Error fetching employees:', error)
+    }
+  }
+
+  const generateTemporaryPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let password = ''
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return password
+  }
+
+  const handleInviteEmployee = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      // Generar contraseña temporal si no se proporcionó
+      const tempPassword = inviteData.temporaryPassword || generateTemporaryPassword()
+
+      // Crear usuario en Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: inviteData.email,
+        password: tempPassword,
+        email_confirm: true
+      })
+
+      if (authError) throw authError
+
+      // Crear registro de empleado
+      const { error: employeeError } = await supabase
+        .from('employees')
+        .insert({
+          user_id: authData.user.id,
+          name: inviteData.name,
+          email: inviteData.email,
+          role: inviteData.role,
+          phone: inviteData.phone,
+          status: 'active',
+          hire_date: new Date().toISOString().split('T')[0]
+        })
+
+      if (employeeError) throw employeeError
+
+      // Mostrar información de acceso
+      alert(`Empleado creado exitosamente!\n\nEmail: ${inviteData.email}\nContraseña temporal: ${tempPassword}\n\nEl empleado debe cambiar su contraseña en el primer inicio de sesión.`)
+
+      setShowInviteModal(false)
+      resetInviteForm()
+      fetchEmployees()
+    } catch (error: any) {
+      console.error('Error inviting employee:', error)
+      if (error.message?.includes('User already registered')) {
+        alert('Este email ya está registrado en el sistema.')
+      } else {
+        alert('Error al crear el empleado: ' + error.message)
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -119,6 +187,16 @@ const Employees: React.FC = () => {
     })
   }
 
+  const resetInviteForm = () => {
+    setInviteData({
+      name: '',
+      email: '',
+      role: 'cashier',
+      phone: '',
+      temporaryPassword: ''
+    })
+  }
+
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee)
     setFormData({
@@ -148,13 +226,30 @@ const Employees: React.FC = () => {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('¿Está seguro de que desea eliminar este empleado?')) {
+    if (confirm('¿Está seguro de que desea eliminar este empleado? Esta acción no se puede deshacer.')) {
       try {
         await supabase.from('employees').delete().eq('id', id)
         fetchEmployees()
       } catch (error) {
         console.error('Error deleting employee:', error)
         alert('Error al eliminar el empleado')
+      }
+    }
+  }
+
+  const promoteToAdmin = async (employeeId: string) => {
+    if (confirm('¿Está seguro de que desea promover este empleado a Administrador? Tendrá acceso completo al sistema.')) {
+      try {
+        await supabase
+          .from('employees')
+          .update({ role: 'admin' })
+          .eq('id', employeeId)
+        
+        fetchEmployees()
+        alert('Empleado promovido a Administrador exitosamente')
+      } catch (error) {
+        console.error('Error promoting employee:', error)
+        alert('Error al promover el empleado')
       }
     }
   }
@@ -209,6 +304,21 @@ const Employees: React.FC = () => {
         return 'Consultor'
       default:
         return role
+    }
+  }
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Crown className="h-3 w-3 mr-1" />
+      case 'manager':
+        return <Settings className="h-3 w-3 mr-1" />
+      case 'cashier':
+        return <DollarSign className="h-3 w-3 mr-1" />
+      case 'viewer':
+        return <Eye className="h-3 w-3 mr-1" />
+      default:
+        return <User className="h-3 w-3 mr-1" />
     }
   }
 
@@ -293,13 +403,22 @@ const Employees: React.FC = () => {
         </div>
         
         {canManageEmployees && (
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center"
-          >
-            <Plus size={20} className="mr-2" />
-            Nuevo Empleado
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center"
+            >
+              <UserPlus size={20} className="mr-2" />
+              Invitar Empleado
+            </button>
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center"
+            >
+              <Plus size={20} className="mr-2" />
+              Nuevo Empleado
+            </button>
+          </div>
         )}
       </div>
 
@@ -340,7 +459,7 @@ const Employees: React.FC = () => {
               </p>
             </div>
             <div className="p-3 bg-red-100 rounded-full">
-              <Shield className="h-6 w-6 text-red-600" />
+              <Crown className="h-6 w-6 text-red-600" />
             </div>
           </div>
         </div>
@@ -414,7 +533,7 @@ const Employees: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(employee.role)}`}>
-                        <Shield className="h-3 w-3 mr-1" />
+                        {getRoleIcon(employee.role)}
                         {getRoleText(employee.role)}
                       </span>
                     </td>
@@ -471,6 +590,15 @@ const Employees: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {canManageEmployees && (
                         <div className="flex justify-end space-x-2">
+                          {employee.role !== 'admin' && (
+                            <button
+                              onClick={() => promoteToAdmin(employee.id)}
+                              className="p-2 text-purple-500 hover:bg-purple-50 rounded-full transition-colors"
+                              title="Promover a Administrador"
+                            >
+                              <Crown size={16} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEdit(employee)}
                             className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
@@ -494,7 +622,146 @@ const Employees: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Invite Employee Modal */}
+      {showInviteModal && canManageEmployees && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Invitar Nuevo Empleado
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Se creará una cuenta y se enviará la información de acceso
+              </p>
+            </div>
+            
+            <form onSubmit={handleInviteEmployee} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre Completo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={inviteData.name}
+                  onChange={(e) => setInviteData({...inviteData, name: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nombre completo del empleado"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={inviteData.email}
+                  onChange={(e) => setInviteData({...inviteData, email: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="correo@ejemplo.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Rol *
+                </label>
+                <select
+                  value={inviteData.role}
+                  onChange={(e) => setInviteData({...inviteData, role: e.target.value as any})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="cashier">Cajero</option>
+                  <option value="manager">Gerente</option>
+                  <option value="viewer">Consultor</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Teléfono
+                </label>
+                <input
+                  type="tel"
+                  value={inviteData.phone}
+                  onChange={(e) => setInviteData({...inviteData, phone: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="+57 123 456 7890"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contraseña Temporal (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={inviteData.temporaryPassword}
+                  onChange={(e) => setInviteData({...inviteData, temporaryPassword: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Se generará automáticamente si se deja vacío"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Si no especificas una contraseña, se generará una automáticamente
+                </p>
+              </div>
+
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-blue-800 mb-2">Permisos del Rol:</h4>
+                <div className="text-xs text-blue-700 space-y-1">
+                  {inviteData.role === 'admin' && (
+                    <p>• Acceso completo a todas las funciones del sistema</p>
+                  )}
+                  {inviteData.role === 'manager' && (
+                    <>
+                      <p>• Gestión de ventas, productos, inventario y clientes</p>
+                      <p>• Visualización de reportes y empleados</p>
+                    </>
+                  )}
+                  {inviteData.role === 'cashier' && (
+                    <>
+                      <p>• Punto de venta y gestión de clientes</p>
+                      <p>• Consulta de productos e inventario</p>
+                    </>
+                  )}
+                  {inviteData.role === 'viewer' && (
+                    <>
+                      <p>• Solo lectura de ventas, productos e inventario</p>
+                      <p>• Acceso a reportes básicos</p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInviteModal(false)
+                    resetInviteForm()
+                  }}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Invitando...' : 'Invitar Empleado'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employee Modal */}
       {showModal && canManageEmployees && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -610,37 +877,6 @@ const Employees: React.FC = () => {
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Dirección completa del empleado"
                 />
-              </div>
-
-              {/* Role Permissions Info */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Permisos del Rol:</h4>
-                <div className="text-xs text-gray-600 space-y-1">
-                  {formData.role === 'admin' && (
-                    <p>• Acceso completo a todas las funciones del sistema</p>
-                  )}
-                  {formData.role === 'manager' && (
-                    <>
-                      <p>• Gestión de ventas, productos, inventario y clientes</p>
-                      <p>• Visualización de reportes y empleados</p>
-                      <p>• Sin acceso a configuración del sistema</p>
-                    </>
-                  )}
-                  {formData.role === 'cashier' && (
-                    <>
-                      <p>• Punto de venta y gestión de clientes</p>
-                      <p>• Consulta de productos e inventario</p>
-                      <p>• Sin acceso a reportes o configuración</p>
-                    </>
-                  )}
-                  {formData.role === 'viewer' && (
-                    <>
-                      <p>• Solo lectura de ventas, productos e inventario</p>
-                      <p>• Acceso a reportes básicos</p>
-                      <p>• Sin permisos de modificación</p>
-                    </>
-                  )}
-                </div>
               </div>
 
               <div className="flex justify-end space-x-4 pt-4">
