@@ -42,7 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
     'ventas': true,
     'inventario': true,
     'contactos': false,
-    'administracion': false,
+    'administracion': true,
     'reportes': false
   })
   const [darkMode, setDarkMode] = React.useState(false)

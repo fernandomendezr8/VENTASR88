@@ -274,7 +274,7 @@ const Employees: React.FC = () => {
   }
 
   const promoteToAdmin = async (employeeId: string) => {
-    if (confirm('¿Está seguro de que desea promover este empleado a Administrador? Tendrá acceso completo al sistema.')) {
+    if (confirm('¿Está seguro de que desea promover este empleado a Administrador?\n\nEsto le dará:\n• Acceso completo al sistema\n• Capacidad de gestionar otros empleados\n• Control sobre todas las configuraciones')) {
       try {
         await supabase
           .from('employees')
@@ -290,6 +290,22 @@ const Employees: React.FC = () => {
     }
   }
 
+  const demoteFromAdmin = async (employeeId: string) => {
+    if (confirm('¿Está seguro de que desea quitar los privilegios de Administrador a este empleado?\n\nSe convertirá en Gerente y perderá:\n• Acceso a gestión de empleados\n• Control sobre configuraciones del sistema')) {
+      try {
+        await supabase
+          .from('employees')
+          .update({ role: 'manager' })
+          .eq('id', employeeId)
+        
+        fetchEmployees()
+        alert('Privilegios de Administrador removidos exitosamente. El empleado ahora es Gerente.')
+      } catch (error) {
+        console.error('Error demoting admin:', error)
+        alert('Error al cambiar el rol del empleado')
+      }
+    }
+  }
   const filteredEmployees = employees.filter(employee =>
     (employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -522,6 +538,13 @@ const Employees: React.FC = () => {
               <Crown className="h-6 w-6 text-red-600" />
             </div>
           </div>
+          {currentUserRole === 'admin' && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs text-gray-500">
+                Puedes promover empleados a administradores usando el botón <Crown className="h-3 w-3 inline text-purple-500" />
+              </p>
+            </div>
+          )}
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -650,7 +673,7 @@ const Employees: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {canManageEmployees && (
                         <div className="flex justify-end space-x-2">
-                          {employee.role !== 'admin' && (
+                          {employee.role !== 'admin' && currentUserRole === 'admin' && (
                             <button
                               onClick={() => promoteToAdmin(employee.id)}
                               className="p-2 text-purple-500 hover:bg-purple-50 rounded-full transition-colors"
@@ -659,18 +682,30 @@ const Employees: React.FC = () => {
                               <Crown size={16} />
                             </button>
                           )}
+                          {employee.role === 'admin' && currentUserRole === 'admin' && employee.user_id !== user?.id && (
+                            <button
+                              onClick={() => demoteFromAdmin(employee.id)}
+                              className="p-2 text-orange-500 hover:bg-orange-50 rounded-full transition-colors"
+                              title="Quitar privilegios de Administrador"
+                            >
+                              <User size={16} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEdit(employee)}
                             className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
                           >
                             <Edit2 size={16} />
                           </button>
-                          <button
-                            onClick={() => handleDelete(employee.id)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {employee.user_id !== user?.id && (
+                            <button
+                              onClick={() => handleDelete(employee.id)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                              title="Eliminar empleado"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
@@ -774,7 +809,11 @@ const Employees: React.FC = () => {
                 <h4 className="text-sm font-medium text-blue-800 mb-2">Permisos del Rol:</h4>
                 <div className="text-xs text-blue-700 space-y-1">
                   {inviteData.role === 'admin' && (
-                    <p>• Acceso completo a todas las funciones del sistema</p>
+                    <>
+                      <p>• Acceso completo a todas las funciones del sistema</p>
+                      <p>• Puede crear y gestionar otros administradores</p>
+                      <p>• Control total sobre empleados y configuraciones</p>
+                    </>
                   )}
                   {inviteData.role === 'manager' && (
                     <>
@@ -877,6 +916,8 @@ const Employees: React.FC = () => {
                     <option value="manager">Gerente</option>
                     <option value="viewer">Consultor</option>
                     {currentUserRole === 'admin' && (
+                      <option value="admin">Administrador</option>
+                    )}
                       <option value="admin">Administrador</option>
                     )}
                   </select>
