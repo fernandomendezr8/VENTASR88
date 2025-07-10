@@ -24,7 +24,8 @@ import {
   Bell,
   Search,
   Sun,
-  Moon
+  Moon,
+  Tag
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
