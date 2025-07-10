@@ -13,6 +13,7 @@ const Employees: React.FC = () => {
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [permissionsLoading, setPermissionsLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -42,6 +43,7 @@ const Employees: React.FC = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        setCurrentUser(user)
         // Primero verificar si existe un empleado para este usuario
         const { data: employee } = await supabase
           .from('employees')
@@ -682,7 +684,7 @@ const Employees: React.FC = () => {
                               <Crown size={16} />
                             </button>
                           )}
-                          {employee.role === 'admin' && currentUserRole === 'admin' && employee.user_id !== user?.id && (
+                          {employee.role === 'admin' && currentUserRole === 'admin' && employee.user_id !== currentUser?.id && (
                             <button
                               onClick={() => demoteFromAdmin(employee.id)}
                               className="p-2 text-orange-500 hover:bg-orange-50 rounded-full transition-colors"
@@ -697,7 +699,7 @@ const Employees: React.FC = () => {
                           >
                             <Edit2 size={16} />
                           </button>
-                          {employee.user_id !== user?.id && (
+                          {employee.user_id !== currentUser?.id && (
                             <button
                               onClick={() => handleDelete(employee.id)}
                               className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
