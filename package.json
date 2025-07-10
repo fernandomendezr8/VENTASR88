@@ -6,8 +6,16 @@
   "scripts": {
     "dev": "npx vite",
     "build": "npx vite build",
+    "build:types": "supabase gen types typescript --local > src/lib/database.types.ts",
     "lint": "eslint .",
-    "preview": "npx vite preview"
+    "preview": "npx vite preview",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase migration new",
+    "db:push": "supabase db push",
+    "db:backup": "supabase db dump --data-only > backup-$(date +%Y%m%d-%H%M%S).sql",
+    "deploy": "npm run build && supabase db push"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.3",
