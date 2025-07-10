@@ -50,11 +50,12 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           const { count } = await supabase
             .from('employees')
             .select('*', { count: 'exact', head: true })
+            .eq('status', 'active')
           
-          const isFirstUser = count === 0 || count === 1 // Considerando el registro placeholder
+          const isFirstUser = count === 0 || count === null
           
           // Crear empleado
-          await supabase
+          const { error: employeeError } = await supabase
             .from('employees')
             .insert({
               user_id: data.user.id,
@@ -64,16 +65,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               status: 'active'
             })
           
-          // Si es el primer usuario, actualizar el registro placeholder
-          if (isFirstUser) {
-            await supabase
-              .from('employees')
-              .update({
-                user_id: data.user.id,
-                name: formData.email.split('@')[0],
-                email: formData.email
-              })
-              .is('user_id', null)
+          if (employeeError) {
+            console.error('Error creating employee:', employeeError)
           }
         }
         
@@ -83,7 +76,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         // Show success message briefly
         const successMsg = document.createElement('div')
         successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
-        successMsg.textContent = 'Cuenta creada exitosamente. Ya puedes iniciar sesión.'
+        successMsg.textContent = `Cuenta creada exitosamente como ${isFirstUser ? 'Administrador' : 'Cajero'}. Ya puedes iniciar sesión.`
         document.body.appendChild(successMsg)
         setTimeout(() => document.body.removeChild(successMsg), 3000)
       }

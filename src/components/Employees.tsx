@@ -12,6 +12,7 @@ const Employees: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [permissionsLoading, setPermissionsLoading] = useState(true)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -37,22 +38,57 @@ const Employees: React.FC = () => {
   }, [])
 
   const getCurrentUserRole = async () => {
+    setPermissionsLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data } = await supabase
+        // Primero verificar si existe un empleado para este usuario
+        const { data: employee } = await supabase
           .from('employees')
           .select('role')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .maybeSingle()
         
-        if (data) {
-          setCurrentUserRole(data.role)
+        if (employee) {
+          setCurrentUserRole(employee.role)
+        } else {
+          // Si no existe empleado, verificar si es el primer usuario y crear admin
+          const { count } = await supabase
+            .from('employees')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'active')
+          
+          if (count === 0 || count === null) {
+            // Es el primer usuario, crear como admin
+            const { data: newEmployee, error } = await supabase
+              .from('employees')
+              .insert({
+                user_id: user.id,
+                name: user.email?.split('@')[0] || 'Administrador',
+                email: user.email || '',
+                role: 'admin',
+                status: 'active'
+              })
+              .select()
+              .single()
+            
+            if (!error && newEmployee) {
+              setCurrentUserRole('admin')
+            }
+          } else {
+            // No es el primer usuario y no tiene empleado, sin permisos
+            setCurrentUserRole('none')
+          }
         }
+      } else {
+        setCurrentUserRole('none')
       }
     } catch (error) {
       console.error('Error getting current user role:', error)
+      setCurrentUserRole('none')
+    } finally {
+      setPermissionsLoading(false)
     }
   }
 
@@ -351,12 +387,36 @@ const Employees: React.FC = () => {
   const canManageEmployees = currentUserRole === 'admin'
   const canViewEmployees = ['admin', 'manager'].includes(currentUserRole)
 
-  if (!canViewEmployees) {
+  if (permissionsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando permisos...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!canViewEmployees && currentUserRole !== 'none') {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">No tienes permisos para ver esta sección</p>
+          <p className="text-xs text-gray-400 mt-2">Rol actual: {currentUserRole}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentUserRole === 'none') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">Tu usuario no está registrado como empleado</p>
+          <p className="text-xs text-gray-400 mt-2">Contacta al administrador para obtener acceso</p>
         </div>
       </div>
     )

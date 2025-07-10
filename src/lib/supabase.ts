@@ -262,6 +262,32 @@ export const getCurrentEmployee = async (): Promise<Employee | null> => {
       return null
     }
     
+    // Si no existe empleado pero es el primer usuario, crear admin automáticamente
+    if (!data) {
+      const { count } = await supabase
+        .from('employees')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+      
+      if (count === 0 || count === null) {
+        const { data: newEmployee, error: createError } = await supabase
+          .from('employees')
+          .insert({
+            user_id: user.id,
+            name: user.email?.split('@')[0] || 'Administrador',
+            email: user.email || '',
+            role: 'admin',
+            status: 'active'
+          })
+          .select()
+          .single()
+        
+        if (!createError && newEmployee) {
+          return newEmployee as Employee
+        }
+      }
+    }
+    
     return data as Employee
   } catch (error) {
     console.error('Error getting current employee:', error)
