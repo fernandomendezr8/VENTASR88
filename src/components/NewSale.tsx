@@ -259,8 +259,8 @@ const NewSale: React.FC = () => {
         
         <div class="info-line"><span>Subtotal:</span><span>${formatCurrency(calculateSubtotal())}</span></div>
         ${discount > 0 ? `<div class="info-line"><span>Descuento:</span><span>-${formatCurrency(discount)}</span></div>` : ''}
-        <div class="info-line"><span>IVA (19%):</span><span>${formatCurrency(calculateTax())}</span></div>
-        <div class="info-line total"><span>TOTAL:</span><span>${formatCurrency(calculateTotal())}</span></div>
+        <div class="info-line"><span>IVA (19%):</span><span>${formatCurrency(calculateTax)}</span></div>
+        <div class="info-line total"><span>TOTAL:</span><span>${formatCurrency(calculateTotal)}</span></div>
         
         <div style="text-align: center; margin-top: 20px;">
           ¡Gracias por su compra!
@@ -448,7 +448,7 @@ const NewSale: React.FC = () => {
         <div className="border-t pt-4 space-y-2">
           <div className="flex justify-between text-sm">
             <span>Subtotal:</span>
-            <span>{formatCurrency(calculateSubtotal())}</span>
+            <span>{formatCurrency(calculateSubtotal)}</span>
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-sm text-green-600">
@@ -458,11 +458,11 @@ const NewSale: React.FC = () => {
           )}
           <div className="flex justify-between text-sm">
             <span>IVA (19%):</span>
-            <span>{formatCurrency(calculateTax())}</span>
+            <span>{formatCurrency(calculateTax)}</span>
           </div>
           <div className="flex justify-between font-bold text-lg border-t pt-2">
             <span>Total:</span>
-            <span>{formatCurrency(calculateTotal())}</span>
+            <span>{formatCurrency(calculateTotal)}</span>
           </div>
         </div>
 
