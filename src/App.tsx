@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react'
 import Layout from './components/Layout'
 import Auth from './components/Auth'
-import { supabase } from './lib/supabase'
+import { supabase, clearCache } from './lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
 // Lazy loading de componentes para mejorar rendimiento
@@ -22,7 +22,7 @@ const Promotions = lazy(() => import('./components/Promotions'))
 // Componente de loading optimizado
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-64">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
   </div>
 )
 
@@ -86,6 +86,7 @@ function App() {
           localStorage.removeItem(key)
         }
       })
+      clearCache() // Limpiar cache al cerrar sesión
       supabase.auth.signOut()
       setUser(null)
       setLoading(false)
@@ -94,6 +95,7 @@ function App() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
+        clearCache() // Limpiar cache al cerrar sesión
         setUser(session?.user ?? null)
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session?.user ?? null)
@@ -113,7 +115,7 @@ function App() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando sistema...</p>
         </div>
       </div>
@@ -129,7 +131,10 @@ function App() {
       currentPage={currentPage} 
       onPageChange={setCurrentPage}
       user={user}
-      onLogout={() => supabase.auth.signOut()}
+      onLogout={() => {
+        clearCache()
+        supabase.auth.signOut()
+      }}
     >
       <Suspense fallback={<LoadingSpinner />}>
         {renderPage}

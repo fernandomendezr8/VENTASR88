@@ -1,6 +1,24 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 
+// Cache para consultas frecuentes
+const queryCache = new Map<string, { data: any; timestamp: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+
+// Función para obtener datos con cache
+const getCachedData = (key: string) => {
+  const cached = queryCache.get(key)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
+  }
+  return null
+}
+
+// Función para guardar datos en cache
+const setCachedData = (key: string, data: any) => {
+  queryCache.set(key, { data, timestamp: Date.now() })
+}
+
 export interface UnitOfMeasure {
   id: string
   name: string
@@ -26,16 +44,17 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    flowType: 'pkce'
   },
   realtime: {
     params: {
-      eventsPerSecond: 10
+      eventsPerSecond: 5
     }
   },
   global: {
     headers: {
-      'x-client-info': 'ventaspro-v1.0'
+      'x-client-info': 'ventaspro-v2.0'
     }
   }
 })
@@ -298,6 +317,11 @@ export const checkPermission = async (module: string, action: string): Promise<b
 // Función para obtener el empleado actual
 export const getCurrentEmployee = async (): Promise<Employee | null> => {
   try {
+    // Verificar cache primero
+    const cacheKey = 'current_employee'
+    const cached = getCachedData(cacheKey)
+    if (cached) return cached
+
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) return null
@@ -335,9 +359,14 @@ export const getCurrentEmployee = async (): Promise<Employee | null> => {
           .single()
         
         if (!createError && newEmployee) {
+          setCachedData(cacheKey, newEmployee)
           return newEmployee as Employee
         }
       }
+    }
+    
+    if (data) {
+      setCachedData(cacheKey, data)
     }
     
     return data as Employee
@@ -345,4 +374,33 @@ export const getCurrentEmployee = async (): Promise<Employee | null> => {
     console.error('Error getting current employee:', error)
     return null
   }
+}
+
+// Función optimizada para consultas de dashboard
+export const getDashboardStats = async () => {
+  const cacheKey = 'dashboard_stats'
+  const cached = getCachedData(cacheKey)
+  if (cached) return cached
+
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Usar una sola consulta optimizada para estadísticas
+    const { data: stats } = await supabase.rpc('get_dashboard_stats')
+    
+    if (stats) {
+      setCachedData(cacheKey, stats)
+    }
+    
+    return stats
+  } catch (error) {
+    console.error('Error getting dashboard stats:', error)
+    return null
+  }
+}
+
+// Limpiar cache cuando sea necesario
+export const clearCache = () => {
+  queryCache.clear()
 }
