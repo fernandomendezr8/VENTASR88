@@ -918,8 +918,6 @@ const Employees: React.FC = () => {
                     {currentUserRole === 'admin' && (
                       <option value="admin">Administrador</option>
                     )}
-                      <option value="admin">Administrador</option>
-                    )}
                   </select>
                 </div>
                 
