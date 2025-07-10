@@ -43,8 +43,6 @@ const Dashboard: React.FC = () => {
   const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([])
 
   const fetchDashboardData = useCallback(async () => {
-    if (loading) return // Evitar múltiples llamadas simultáneas
-    
     setLoading(true)
     try {
       const today = new Date()
@@ -52,13 +50,13 @@ const Dashboard: React.FC = () => {
 
       // Ejecutar consultas en paralelo para mejor rendimiento
       const [
-        { data: salesData },
-        { data: recentSalesData },
-        { count: productsCount },
-        { count: customersCount },
-        { count: categoriesCount },
-        { count: suppliersCount },
-        { data: inventoryData }
+        salesResult,
+        recentSalesResult,
+        productsResult,
+        customersResult,
+        categoriesResult,
+        suppliersResult,
+        inventoryResult
       ] = await Promise.all([
         supabase.from('sales').select('total_amount, created_at, status'),
         supabase.from('sales').select('id, total_amount, created_at, customer:customers(name)').order('created_at', { ascending: false }).limit(5),
@@ -70,7 +68,8 @@ const Dashboard: React.FC = () => {
       ])
 
       // Procesar datos de forma más eficiente
-      const lowStockItems = inventoryData?.filter(item => item.quantity < item.min_stock) || []
+      const salesData = salesResult.data || []
+      const lowStockItems = inventoryResult.data?.filter(item => item.quantity < item.min_stock) || []
       const lowStockProducts = lowStockItems.map(item => ({
         id: item.product?.id || '',
         name: item.product?.name || '',
@@ -78,33 +77,31 @@ const Dashboard: React.FC = () => {
         min_stock: item.min_stock
       }))
 
-      if (salesData) {
-        const totalSales = salesData.reduce((sum, sale) => sum + (sale.total_amount || 0), 0)
-        const todaySales = salesData
-          .filter(sale => new Date(sale.created_at) >= today)
-          .reduce((sum, sale) => sum + (sale.total_amount || 0), 0)
-        const pendingSales = salesData.filter(sale => sale.status === 'pending').length
+      const totalSales = salesData.reduce((sum, sale) => sum + (sale.total_amount || 0), 0)
+      const todaySales = salesData
+        .filter(sale => new Date(sale.created_at) >= today)
+        .reduce((sum, sale) => sum + (sale.total_amount || 0), 0)
+      const pendingSales = salesData.filter(sale => sale.status === 'pending').length
 
-        setStats({
-          totalSales,
-          todaySales,
-          totalProducts: productsCount || 0,
-          lowStockItems: lowStockItems.length,
-          totalCustomers: customersCount || 0,
-          pendingSales,
-          totalCategories: categoriesCount || 0,
-          totalSuppliers: suppliersCount || 0
-        })
-      }
+      setStats({
+        totalSales,
+        todaySales,
+        totalProducts: productsResult.count || 0,
+        lowStockItems: lowStockItems.length,
+        totalCustomers: customersResult.count || 0,
+        pendingSales,
+        totalCategories: categoriesResult.count || 0,
+        totalSuppliers: suppliersResult.count || 0
+      })
 
-      setRecentSales(recentSalesData || [])
+      setRecentSales(recentSalesResult.data || [])
       setLowStockProducts(lowStockProducts)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
       setLoading(false)
     }
-  }, [loading])
+  }, [])
 
   useEffect(() => {
     fetchDashboardData()
