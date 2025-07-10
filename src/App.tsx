@@ -69,6 +69,20 @@ function App() {
     })
     .catch(() => {
       // Handle authentication errors by clearing session and forcing re-authentication
+      // Clear stale refresh tokens from local storage
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      if (supabaseUrl) {
+        const projectRef = supabaseUrl.split('//')[1]?.split('.')[0]
+        if (projectRef) {
+          localStorage.removeItem(`sb-${projectRef}-auth-token`)
+        }
+      }
+      // Also clear any other potential auth-related items
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.includes('auth')) {
+          localStorage.removeItem(key)
+        }
+      })
       supabase.auth.signOut()
       setUser(null)
       setLoading(false)
@@ -76,10 +90,9 @@ function App() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Handle sign out events and token refresh failures
-      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      if (event === 'SIGNED_OUT') {
         setUser(session?.user ?? null)
-      } else if (event === 'SIGNED_IN') {
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session?.user ?? null)
       } else {
         setUser(session?.user ?? null)
