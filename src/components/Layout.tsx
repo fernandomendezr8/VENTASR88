@@ -87,6 +87,15 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange, us
       ]
     },
     {
+      id: 'promociones',
+      title: 'Promociones',
+      icon: Tag,
+      color: 'from-pink-500 to-pink-600',
+      items: [
+        { id: 'promotions', label: 'Gestión de Promociones', icon: Tag, description: 'Crear y gestionar promociones', color: 'text-pink-600' }
+      ]
+    },
+    {
       id: 'contactos',
       title: 'Contactos',
       icon: Users,

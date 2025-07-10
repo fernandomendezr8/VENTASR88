@@ -17,6 +17,7 @@ const Inventory = lazy(() => import('./components/Inventory'))
 const CashRegister = lazy(() => import('./components/CashRegister'))
 const Employees = lazy(() => import('./components/Employees'))
 const Settings = lazy(() => import('./components/Settings'))
+const Promotions = lazy(() => import('./components/Promotions'))
 
 // Componente de loading optimizado
 const LoadingSpinner = () => (
@@ -56,6 +57,8 @@ function App() {
         return <Employees />
       case 'settings':
         return <Settings />
+      case 'promotions':
+        return <Promotions />
       default:
         return <Dashboard />
     }

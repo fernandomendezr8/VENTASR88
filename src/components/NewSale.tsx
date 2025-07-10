@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Plus, Minus, Search, ShoppingCart, User, Package, Calculator, X, Receipt } from 'lucide-react'
-import { supabase, Product, Customer, Sale } from '../lib/supabase'
+import { supabase, Product, Customer, Sale, Promotion } from '../lib/supabase'
+import { findBestPromotion, getApplicablePromotions, PromotionResult } from '../utils/promotionUtils'
 
 interface CartItem {
   product: Product
@@ -12,9 +13,12 @@ interface CartItem {
 const NewSale: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [promotions, setPromotions] = useState<Promotion[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [selectedPromotion, setSelectedPromotion] = useState<PromotionResult | null>(null)
+  const [availablePromotions, setAvailablePromotions] = useState<PromotionResult[]>([])
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
@@ -63,9 +67,55 @@ const NewSale: React.FC = () => {
     }
   }, [])
 
+  const fetchPromotions = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('promotions')
+        .select(`
+          *,
+          promotion_products(
+            product_id,
+            product:products(id, name)
+          ),
+          promotion_categories(
+            category_id,
+            category:categories(id, name)
+          )
+        `)
+        .eq('is_active', true)
+        .gte('end_date', new Date().toISOString())
+        .lte('start_date', new Date().toISOString())
+      
+      setPromotions(data || [])
+    } catch (error) {
+      console.error('Error fetching promotions:', error)
+    }
+  }, [])
+
   useEffect(() => {
-    Promise.all([fetchProducts(), fetchCustomers()])
-  }, [fetchProducts, fetchCustomers])
+    Promise.all([fetchProducts(), fetchCustomers(), fetchPromotions()])
+  }, [fetchProducts, fetchCustomers, fetchPromotions])
+
+  // Update available promotions when cart changes
+  useEffect(() => {
+    if (cart.length > 0 && promotions.length > 0) {
+      const applicable = getApplicablePromotions(promotions, cart, calculateSubtotal)
+      setAvailablePromotions(applicable)
+      
+      // Auto-select best promotion if none is selected
+      if (!selectedPromotion && applicable.length > 0) {
+        setSelectedPromotion(applicable[0])
+      }
+      
+      // Clear selected promotion if it's no longer applicable
+      if (selectedPromotion && !applicable.find(p => p.promotion.id === selectedPromotion.promotion.id)) {
+        setSelectedPromotion(null)
+      }
+    } else {
+      setAvailablePromotions([])
+      setSelectedPromotion(null)
+    }
+  }, [cart, promotions, selectedPromotion])
 
   const addToCart = useCallback((product: Product) => {
     const existingItem = cart.find(item => item.product.id === product.id)
@@ -108,9 +158,13 @@ const NewSale: React.FC = () => {
     return calculateSubtotal * 0.19 // 19% IVA
   }, [calculateSubtotal])
 
+  const calculatePromotionDiscount = useMemo(() => {
+    return selectedPromotion ? selectedPromotion.discountAmount : 0
+  }, [selectedPromotion])
+
   const calculateTotal = useMemo(() => {
-    return calculateSubtotal + calculateTax - discount
-  }, [calculateSubtotal, calculateTax, discount])
+    return calculateSubtotal + calculateTax - discount - calculatePromotionDiscount
+  }, [calculateSubtotal, calculateTax, discount, calculatePromotionDiscount])
 
   const handleCreateCustomer = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -147,7 +201,7 @@ const NewSale: React.FC = () => {
       const saleData = {
         customer_id: selectedCustomer?.id || null,
         subtotal: calculateSubtotal,
-        discount: discount,
+        discount: discount + calculatePromotionDiscount,
         tax: calculateTax,
         total_amount: calculateTotal,
         payment_method: paymentMethod,
@@ -177,6 +231,25 @@ const NewSale: React.FC = () => {
 
       if (itemsError) throw itemsError
 
+      // Record promotion usage if applicable
+      if (selectedPromotion) {
+        await supabase
+          .from('promotion_usage')
+          .insert({
+            promotion_id: selectedPromotion.promotion.id,
+            sale_id: sale.id,
+            discount_amount: selectedPromotion.discountAmount
+          })
+
+        // Update promotion usage count
+        await supabase
+          .from('promotions')
+          .update({ 
+            current_uses: selectedPromotion.promotion.current_uses + 1 
+          })
+          .eq('id', selectedPromotion.promotion.id)
+      }
+
       // Update inventory
       for (const item of cart) {
         const currentInventory = item.product.inventory?.[0]?.quantity || 0
@@ -205,11 +278,13 @@ const NewSale: React.FC = () => {
       // Clear cart and reset form
       setCart([])
       setSelectedCustomer(null)
+      setSelectedPromotion(null)
       setDiscount(0)
       setPaymentMethod('cash')
       
       // Refresh products to update inventory display
       fetchProducts()
+      fetchPromotions()
 
     } catch (error) {
       console.error('Error processing sale:', error)
@@ -217,7 +292,7 @@ const NewSale: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [cart, selectedCustomer, calculateSubtotal, calculateTax, calculateTotal, discount, paymentMethod, fetchProducts])
+  }, [cart, selectedCustomer, selectedPromotion, calculateSubtotal, calculateTax, calculateTotal, discount, calculatePromotionDiscount, paymentMethod, fetchProducts, fetchPromotions])
 
   const printReceipt = () => {
     if (!lastSale) return
@@ -258,7 +333,8 @@ const NewSale: React.FC = () => {
         </div>
         
         <div class="info-line"><span>Subtotal:</span><span>${formatCurrency(calculateSubtotal())}</span></div>
-        ${discount > 0 ? `<div class="info-line"><span>Descuento:</span><span>-${formatCurrency(discount)}</span></div>` : ''}
+        ${discount > 0 ? `<div class="info-line"><span>Descuento manual:</span><span>-${formatCurrency(discount)}</span></div>` : ''}
+        ${selectedPromotion ? `<div class="info-line"><span>Promoción (${selectedPromotion.promotion.name}):</span><span>-${formatCurrency(selectedPromotion.discountAmount)}</span></div>` : ''}
         <div class="info-line"><span>IVA (19%):</span><span>${formatCurrency(calculateTax)}</span></div>
         <div class="info-line total"><span>TOTAL:</span><span>${formatCurrency(calculateTotal)}</span></div>
         
@@ -416,6 +492,38 @@ const NewSale: React.FC = () => {
           )}
         </div>
 
+        {/* Promotions Section */}
+        {availablePromotions.length > 0 && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Promociones Disponibles</label>
+            <div className="space-y-2">
+              {availablePromotions.map((promotionResult) => (
+                <div
+                  key={promotionResult.promotion.id}
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    selectedPromotion?.promotion.id === promotionResult.promotion.id
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-300'
+                  }`}
+                  onClick={() => setSelectedPromotion(promotionResult)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900">{promotionResult.promotion.name}</h4>
+                      <p className="text-xs text-gray-600">{promotionResult.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-purple-600">
+                        -{formatCurrency(promotionResult.discountAmount)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Payment Method */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">Método de Pago</label>
@@ -432,7 +540,7 @@ const NewSale: React.FC = () => {
 
         {/* Discount */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Descuento</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Descuento Manual</label>
           <input
             type="number"
             min="0"
@@ -452,8 +560,14 @@ const NewSale: React.FC = () => {
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-sm text-green-600">
-              <span>Descuento:</span>
+              <span>Descuento manual:</span>
               <span>-{formatCurrency(discount)}</span>
+            </div>
+          )}
+          {selectedPromotion && (
+            <div className="flex justify-between text-sm text-purple-600">
+              <span>Promoción:</span>
+              <span>-{formatCurrency(calculatePromotionDiscount)}</span>
             </div>
           )}
           <div className="flex justify-between text-sm">

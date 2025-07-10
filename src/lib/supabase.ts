@@ -148,6 +148,52 @@ export interface Employee {
   created_by?: string
 }
 
+export interface Promotion {
+  id: string
+  name: string
+  description: string
+  type: 'percentage' | 'fixed_amount' | 'buy_x_get_y' | 'bundle'
+  value: number
+  conditions: Record<string, any>
+  start_date: string
+  end_date: string
+  is_active: boolean
+  min_purchase_amount: number
+  max_uses?: number
+  current_uses: number
+  created_at: string
+  updated_at: string
+  created_by?: string
+  products?: Product[]
+  categories?: Category[]
+}
+
+export interface PromotionProduct {
+  id: string
+  promotion_id: string
+  product_id: string
+  created_at: string
+  product?: Product
+}
+
+export interface PromotionCategory {
+  id: string
+  promotion_id: string
+  category_id: string
+  created_at: string
+  category?: Category
+}
+
+export interface PromotionUsage {
+  id: string
+  promotion_id: string
+  sale_id: string
+  discount_amount: number
+  created_at: string
+  promotion?: Promotion
+  sale?: Sale
+}
+
 export interface UserPermissions {
   sales: {
     create: boolean
@@ -186,6 +232,12 @@ export interface UserPermissions {
     delete: boolean
   }
   employees: {
+    create: boolean
+    read: boolean
+    update: boolean
+    delete: boolean
+  }
+  promotions: {
     create: boolean
     read: boolean
     update: boolean
